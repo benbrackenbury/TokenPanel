@@ -1,25 +1,15 @@
 import SwiftUI
-import Playgrounds
 
-@main struct MyApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-    }
-}
-
+/// Shared root content used by previews and non-menu-bar hosts.
 struct ContentView: View {
+    @State private var viewModel = UsageViewModel()
+
     var body: some View {
-        Text("Hello, world!")
-            .padding()
+        MenuPanelView(viewModel: viewModel)
+            .onAppear { viewModel.start() }
     }
 }
 
 #Preview {
     ContentView()
-}
-
-#Playground {
-    _ = 1 + 2
 }
