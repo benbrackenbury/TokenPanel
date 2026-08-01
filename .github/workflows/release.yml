@@ -1,0 +1,126 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build DMG & publish
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Parse version from tag
+        id: version
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          # v1.2.3 -> 1.2.3
+          VERSION="${TAG#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?([.-].*)?$ ]]; then
+            echo "Tag must look like v1.0.0 (got: $TAG)"
+            exit 1
+          fi
+          # Numeric build from git rev count (unique, increasing)
+          BUILD="$(git rev-list --count HEAD)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "Using version=$VERSION build=$BUILD"
+
+      - name: Build Release app
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD: ${{ steps.version.outputs.build }}
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project TokenPanel.xcodeproj \
+            -scheme TokenPanel \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/DerivedData \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM= \
+            build
+
+          APP_PATH="$(find build/DerivedData/Build/Products/Release -name 'TokenPanel.app' -type d | head -n 1)"
+          if [[ -z "$APP_PATH" || ! -d "$APP_PATH" ]]; then
+            echo "TokenPanel.app not found under DerivedData"
+            find build/DerivedData/Build/Products -maxdepth 3 -type d -print || true
+            exit 1
+          fi
+          echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
+          echo "Built: $APP_PATH"
+          defaults read "$APP_PATH/Contents/Info" CFBundleShortVersionString || true
+          defaults read "$APP_PATH/Contents/Info" CFBundleVersion || true
+
+      - name: Ad-hoc sign app
+        run: |
+          set -euo pipefail
+          codesign --force --deep --sign - "$APP_PATH"
+          codesign -dv --verbose=2 "$APP_PATH" 2>&1 || true
+
+      - name: Package DMG
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          bash scripts/package-dmg.sh "$APP_PATH" "$VERSION"
+          DMG_PATH="dist/TokenPanel-${VERSION}.dmg"
+          test -f "$DMG_PATH"
+          ls -lh "$DMG_PATH"
+          echo "DMG_PATH=$DMG_PATH" >> "$GITHUB_ENV"
+          # checksum for release notes
+          shasum -a 256 "$DMG_PATH" | tee dist/TokenPanel-${VERSION}.dmg.sha256
+          echo "SHA256_PATH=dist/TokenPanel-${VERSION}.dmg.sha256" >> "$GITHUB_ENV"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: TokenPanel ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.tag, '-') || contains(steps.version.outputs.tag, 'alpha') || contains(steps.version.outputs.tag, 'beta') || contains(steps.version.outputs.tag, 'rc') }}
+          generate_release_notes: true
+          body: |
+            ## TokenPanel ${{ steps.version.outputs.version }}
+
+            macOS menu bar app for SuperGrok / Grok usage.
+
+            ### Install
+            1. Download `TokenPanel-${{ steps.version.outputs.version }}.dmg`
+            2. Open the DMG and drag **TokenPanel** to **Applications**
+            3. On first launch: right-click → **Open** if macOS blocks the unsigned build
+            4. Run `grok login` if you have not already, then open TokenPanel from the menu bar
+
+            ### Notes
+            - Ad-hoc signed (not notarized). Gatekeeper may require **Open** from the context menu once.
+            - Requires an active Grok session (`grok login`).
+          files: |
+            ${{ env.DMG_PATH }}
+            ${{ env.SHA256_PATH }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

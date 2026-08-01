@@ -32,9 +32,11 @@ Usage numbers come from Grok’s account credits surface (not a public developer
 grok login
 ```
 
-### 2. Build and run TokenPanel
+### 2. Install TokenPanel
 
-Open `TokenPanel.xcodeproj` in Xcode, choose the **TokenPanel** scheme and **My Mac**, then Run (⌘R).
+**From a release (recommended):** download the DMG from [GitHub Releases](../../releases), open it, and drag TokenPanel to Applications. On first launch, right-click → **Open** if macOS warns about an unsigned app.
+
+**From source:** open `TokenPanel.xcodeproj` in Xcode, choose the **TokenPanel** scheme and **My Mac**, then Run (⌘R).
 
 ### 3. Use the menu bar
 
@@ -49,3 +51,14 @@ Look for the TokenPanel icon in the menu bar (there is no Dock icon).
 - Links open Grok’s usage and billing pages on grok.com
 
 If numbers stop loading, run `grok login` again (sessions expire after about a week), then refresh.
+
+## Releases
+
+Pushing a version tag builds a macOS app and publishes a DMG on GitHub Releases:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Tags must look like `v1.0.0` (optional pre-release suffixes such as `v1.0.0-beta.1` are treated as pre-releases). Builds are ad-hoc signed, not notarized.
