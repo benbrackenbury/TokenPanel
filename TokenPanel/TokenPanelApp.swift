@@ -7,8 +7,6 @@ struct TokenPanelApp: App {
 
     var body: some Scene {
         #if os(macOS)
-        // Settings open as a sheet from the menu panel — MenuBarExtra + LSUIElement
-        // apps often fail to present the system Settings scene via openSettings().
         MenuBarExtra {
             MenuPanelView(viewModel: viewModel, updater: updater)
                 .task { viewModel.start() }
@@ -22,6 +20,12 @@ struct TokenPanelApp: App {
             .id(viewModel.menuBarSignature)
         }
         .menuBarExtraStyle(.window)
+
+        Window("Settings", id: "settings") {
+            SettingsView(viewModel: viewModel, updater: updater)
+        }
+        .windowResizability(.contentSize)
+        .defaultLaunchBehavior(.suppressed)
         #else
         WindowGroup {
             MenuPanelView(viewModel: viewModel, updater: updater)

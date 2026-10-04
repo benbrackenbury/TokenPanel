@@ -35,8 +35,15 @@ extension ProviderID {
     }
 
     func glyphImage(points: CGFloat, template: Bool) -> NSImage {
-        let image = (NSImage(named: logoName)?.copy() as? NSImage) ?? NSImage()
-        image.size = NSSize(width: points, height: points)
+        let dest = NSSize(width: points, height: points)
+        guard let base = NSImage(named: logoName)?.copy() as? NSImage else {
+            return NSImage(size: dest)
+        }
+        base.isTemplate = false
+        let image = NSImage(size: dest, flipped: false) { rect in
+            base.draw(in: rect)
+            return true
+        }
         image.isTemplate = template
         return image
     }
@@ -62,12 +69,14 @@ enum MenuBarCluster {
             }
         }
 
+        // Load glyphs before the drawing block. NSImage(named:) inside it
+        // can return nil (or the image being created).
+        let glyphs = providers.map { $0.glyphImage(points: icon, template: false) }
         let size = NSSize(width: max(width, icon), height: icon)
         let image = NSImage(size: size, flipped: false) { _ in
             var x: CGFloat = 0
-            for (index, provider) in providers.enumerated() {
+            for (index, glyph) in glyphs.enumerated() {
                 if index > 0 { x += gap }
-                let glyph = provider.glyphImage(points: icon, template: false)
                 glyph.draw(in: NSRect(x: x, y: 0, width: icon, height: icon))
                 x += icon
                 let title = titles[index]

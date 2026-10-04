@@ -105,7 +105,19 @@ jobs:
       - name: Ad-hoc sign app
         run: |
           set -euo pipefail
-          codesign --force --deep --sign - "$APP_PATH"
+          SPARKLE="$APP_PATH/Contents/Frameworks/Sparkle.framework"
+          # XPC helpers need a Developer ID host. This build is ad-hoc and
+          # not sandboxed, so Sparkle can update in-process without them.
+          rm -rf "$SPARKLE/Versions/B/XPCServices" "$SPARKLE/XPCServices"
+          if [[ -x "$SPARKLE/Versions/B/Autoupdate" ]]; then
+            codesign --force --sign - --timestamp=none "$SPARKLE/Versions/B/Autoupdate"
+          fi
+          if [[ -d "$SPARKLE/Versions/B/Updater.app" ]]; then
+            codesign --force --sign - --timestamp=none "$SPARKLE/Versions/B/Updater.app"
+          fi
+          codesign --force --sign - --timestamp=none "$SPARKLE/Versions/B/Sparkle"
+          codesign --force --sign - --timestamp=none "$SPARKLE"
+          codesign --force --sign - --timestamp=none "$APP_PATH"
           codesign -dv --verbose=2 "$APP_PATH" 2>&1 || true
 
       - name: Package DMG

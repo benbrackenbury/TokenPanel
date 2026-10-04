@@ -6,6 +6,9 @@ import AppKit
 struct MenuPanelView: View {
     @Bindable var viewModel: UsageViewModel
     @Bindable var updater: AppUpdater
+    #if os(macOS)
+    @Environment(\.openWindow) private var openWindow
+    #endif
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -25,26 +28,25 @@ struct MenuPanelView: View {
         .frame(minHeight: 520, idealHeight: 580, maxHeight: 720)
         #else
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        #endif
         .sheet(isPresented: $viewModel.showingSettings) {
-            settingsSheet
+            NavigationStack {
+                SettingsView(viewModel: viewModel, updater: updater)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { viewModel.showingSettings = false }
+                        }
+                    }
+            }
         }
+        #endif
     }
 
-    @ViewBuilder
-    private var settingsSheet: some View {
+    private func openSettings() {
         #if os(macOS)
-        SettingsView(viewModel: viewModel, updater: updater)
-            .frame(width: 440, height: 580)
+        openWindow(id: "settings")
+        NSApp.activate(ignoringOtherApps: true)
         #else
-        NavigationStack {
-            SettingsView(viewModel: viewModel, updater: updater)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { viewModel.showingSettings = false }
-                    }
-                }
-        }
+        viewModel.showingSettings = true
         #endif
     }
 
@@ -249,7 +251,7 @@ struct MenuPanelView: View {
                 .controlSize(.small)
 
                 Button("Settings…") {
-                    viewModel.showingSettings = true
+                    openSettings()
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -273,7 +275,7 @@ struct MenuPanelView: View {
     private var footer: some View {
         HStack {
             Button("Settings…") {
-                viewModel.showingSettings = true
+                openSettings()
             }
             .buttonStyle(.borderless)
 

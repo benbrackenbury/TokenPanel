@@ -30,11 +30,19 @@ final class AppUpdater {
     init() {
         #if os(macOS)
         if Self.shouldCheckForUpdates {
-            controller = SPUStandardUpdaterController(
-                startingUpdater: true,
+            let sparkle = SPUStandardUpdaterController(
+                startingUpdater: false,
                 updaterDelegate: sparkleDelegate,
                 userDriverDelegate: nil
             )
+            controller = sparkle
+            // startingUpdater: true shows Sparkle's "failed to start" alert when
+            // XPC helpers cannot launch (ad-hoc signed host). Start quietly.
+            do {
+                try sparkle.updater.start()
+            } catch {
+                NSLog("Sparkle start failed: \(error.localizedDescription)")
+            }
         } else {
             controller = nil
         }
@@ -55,7 +63,7 @@ final class AppUpdater {
 
     func check() {
         #if os(macOS)
-        guard isEnabled, let controller else { return }
+        guard isEnabled, let controller, controller.updater.canCheckForUpdates else { return }
         NSApp.activate(ignoringOtherApps: true)
         controller.checkForUpdates(nil)
         #endif

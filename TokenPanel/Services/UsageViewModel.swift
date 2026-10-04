@@ -121,6 +121,20 @@ final class UsageViewModel {
         showAllMenuBarProviders = value
     }
 
+    /// nil means every connected provider in the menu bar.
+    var menuBarFocus: ProviderID? {
+        showAllMenuBarProviders ? nil : selectedProvider
+    }
+
+    func setMenuBarFocus(_ provider: ProviderID?) {
+        if let provider {
+            setShowAllMenuBarProviders(false)
+            select(provider)
+        } else {
+            setShowAllMenuBarProviders(true)
+        }
+    }
+
     func formatPercent(_ value: Double) -> String {
         snapshot.formatPercent(value)
     }

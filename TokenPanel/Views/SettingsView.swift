@@ -11,49 +11,28 @@ struct SettingsView: View {
     @State private var showMenuBarPercentage: Bool = true
     @State private var statusMessage: String?
     @State private var grokAuthPath: String = ""
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(spacing: 0) {
-            #if os(macOS)
-            HStack {
-                Text("Settings")
-                    .font(.headline)
-                Spacer()
-                Button("Done") {
-                    viewModel.showingSettings = false
-                    dismiss()
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-            .padding()
-            Divider()
-            #endif
-
-            Form {
+        Form {
                 Section("Menu bar") {
                     Picker("Show usage for", selection: Binding(
-                        get: { viewModel.selectedProvider },
-                        set: { viewModel.select($0) }
+                        get: { viewModel.menuBarFocus },
+                        set: { viewModel.setMenuBarFocus($0) }
                     )) {
+                        Text("All").tag(Optional<ProviderID>.none)
                         ForEach(ProviderID.allCases) { provider in
                             Label {
                                 Text(provider.displayName)
                             } icon: {
                                 ProviderLogo(provider: provider, size: 14)
                             }
-                            .tag(provider)
+                            .tag(Optional(provider))
                         }
                     }
 
                     Stepper(value: $refreshMinutes, in: 1...60) {
                         Text("Refresh every \(refreshMinutes) min")
                     }
-
-                    Toggle("Show all providers in menu bar", isOn: Binding(
-                        get: { viewModel.showAllMenuBarProviders },
-                        set: { viewModel.setShowAllMenuBarProviders($0) }
-                    ))
 
                     Toggle("Show percentage in menu bar", isOn: $showMenuBarPercentage)
                         .onChange(of: showMenuBarPercentage) { _, newValue in
@@ -163,8 +142,8 @@ struct SettingsView: View {
                     #endif
                 }
             }
-            .formStyle(.grouped)
-        }
+        .formStyle(.grouped)
+        .frame(width: 440, height: 580)
         #if os(iOS)
         .navigationTitle("Settings")
         #endif
