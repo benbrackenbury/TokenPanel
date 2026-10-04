@@ -113,10 +113,17 @@ jobs:
             It reuses each product's local session. No extra API keys. It does not track developer API prepaid balances.
 
             ### Install
-            1. Download `TokenPanel-${{ steps.version.outputs.version }}.dmg`
-            2. Open the DMG and drag **TokenPanel** to **Applications**
-            3. On first launch: right-click → **Open** if macOS blocks the unsigned build
-            4. Sign in to the tools you care about, then open TokenPanel from the menu bar
+
+            Homebrew:
+
+            ```
+            brew tap benbrackenbury/tokenpanel https://github.com/benbrackenbury/TokenPanel
+            brew install --cask tokenpanel
+            ```
+
+            Or download `TokenPanel-${{ steps.version.outputs.version }}.dmg`, open it, and drag **TokenPanel** to **Applications**.
+            On first launch: right-click → **Open** if macOS blocks the unsigned build.
+            Then sign in to the tools you care about, then open TokenPanel from the menu bar.
 
             ```
             grok login
@@ -135,3 +142,28 @@ jobs:
             ${{ env.SHA256_PATH }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Homebrew cask
+        if: ${{ !(contains(steps.version.outputs.tag, '-') || contains(steps.version.outputs.tag, 'alpha') || contains(steps.version.outputs.tag, 'beta') || contains(steps.version.outputs.tag, 'rc')) }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          SHA256="$(awk '{print $1}' "$SHA256_PATH")"
+          bash scripts/write-homebrew-cask.sh "$VERSION" "$SHA256"
+
+          git fetch origin "$DEFAULT_BRANCH"
+          git worktree add /tmp/tokenpanel-tap "origin/$DEFAULT_BRANCH"
+          mkdir -p /tmp/tokenpanel-tap/Casks
+          cp Casks/tokenpanel.rb /tmp/tokenpanel-tap/Casks/tokenpanel.rb
+
+          git -C /tmp/tokenpanel-tap config user.name "github-actions[bot]"
+          git -C /tmp/tokenpanel-tap config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C /tmp/tokenpanel-tap add Casks/tokenpanel.rb
+          if git -C /tmp/tokenpanel-tap diff --cached --quiet; then
+            echo "Homebrew cask already at $VERSION"
+            exit 0
+          fi
+          git -C /tmp/tokenpanel-tap commit -m "chore: bump Homebrew cask to ${VERSION}"
+          git -C /tmp/tokenpanel-tap push origin "HEAD:$DEFAULT_BRANCH"
