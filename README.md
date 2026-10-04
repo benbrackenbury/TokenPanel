@@ -15,11 +15,11 @@ brew tap benbrackenbury/tokenpanel https://github.com/benbrackenbury/TokenPanel
 brew install --cask tokenpanel
 ```
 
-Stable version tags also bump this tap after the GitHub Release is published. Then `brew upgrade --cask tokenpanel`.
+A version tag updates this tap after the GitHub Release is published. Then `brew upgrade --cask tokenpanel`.
 
-**Latest DMG:** [TokenPanel 0.2.0](https://github.com/benbrackenbury/TokenPanel/releases/tag/v0.2.0)
+**DMG:** [Releases](https://github.com/benbrackenbury/TokenPanel/releases)
 
-1. Download `TokenPanel-0.2.0.dmg`
+1. Download the `.dmg` from a release
 2. Open the DMG and drag TokenPanel to Applications
 3. On first launch, right-click the app and choose **Open** if macOS blocks the unsigned build
 4. Sign in to the tools you care about:
