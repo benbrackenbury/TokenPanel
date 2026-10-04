@@ -108,17 +108,28 @@ jobs:
           body: |
             ## TokenPanel ${{ steps.version.outputs.version }}
 
-            macOS menu bar app for SuperGrok / Grok usage.
+            macOS menu bar app for plan usage on Grok, Cursor, Claude Code, and Codex / ChatGPT.
+
+            It reuses each product's local session. No extra API keys. It does not track developer API prepaid balances.
 
             ### Install
             1. Download `TokenPanel-${{ steps.version.outputs.version }}.dmg`
             2. Open the DMG and drag **TokenPanel** to **Applications**
             3. On first launch: right-click → **Open** if macOS blocks the unsigned build
-            4. Run `grok login` if you have not already, then open TokenPanel from the menu bar
+            4. Sign in to the tools you care about, then open TokenPanel from the menu bar
+
+            ```
+            grok login
+            codex login
+            claude
+            ```
+
+            Cursor: sign in inside the Cursor app.
 
             ### Notes
             - Ad-hoc signed (not notarized). Gatekeeper may require **Open** from the context menu once.
-            - Requires an active Grok session (`grok login`).
+            - Sessions expire. If numbers stop loading, sign in again in that product, then refresh.
+            - Claude Code only works with the claude.ai subscription login, not an API key.
           files: |
             ${{ env.DMG_PATH }}
             ${{ env.SHA256_PATH }}
