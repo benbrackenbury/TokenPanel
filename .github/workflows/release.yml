@@ -75,8 +75,21 @@ jobs:
           fi
           echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
           echo "Built: $APP_PATH"
-          SHORT="$(defaults read "$APP_PATH/Contents/Info" CFBundleShortVersionString)"
-          BUNDLE_VERSION="$(defaults read "$APP_PATH/Contents/Info" CFBundleVersion)"
+          INFO_PLIST="$APP_PATH/Contents/Info.plist"
+          stamp_version() {
+            local plist="$1"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$plist" \
+              || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $VERSION" "$plist"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD" "$plist" \
+              || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD" "$plist"
+          }
+          stamp_version "$INFO_PLIST"
+          WIDGET_PLIST="$APP_PATH/Contents/PlugIns/TokenPanelWidgets.appex/Contents/Info.plist"
+          if [[ -f "$WIDGET_PLIST" ]]; then
+            stamp_version "$WIDGET_PLIST"
+          fi
+          SHORT="$(plutil -extract CFBundleShortVersionString raw "$INFO_PLIST")"
+          BUNDLE_VERSION="$(plutil -extract CFBundleVersion raw "$INFO_PLIST")"
           echo "CFBundleShortVersionString=$SHORT CFBundleVersion=$BUNDLE_VERSION"
           if [[ "$SHORT" != "$VERSION" ]]; then
             echo "Stamped version $SHORT does not match tag $VERSION"
