@@ -11,9 +11,12 @@ It does not track xAI, Anthropic, or OpenAI developer API prepaid balances. Clau
 **Homebrew (recommended):**
 
 ```bash
+brew trust --cask benbrackenbury/tokenpanel/tokenpanel
 brew tap benbrackenbury/tokenpanel https://github.com/benbrackenbury/TokenPanel
 brew install --cask tokenpanel
 ```
+
+Homebrew 6 refuses to load casks from an untrusted third-party tap. `brew trust` is required once per machine.
 
 A version tag updates this tap after the GitHub Release is published. Then `brew upgrade --cask tokenpanel`.
 

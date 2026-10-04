@@ -143,6 +143,7 @@ jobs:
             Homebrew:
 
             ```
+            brew trust --cask benbrackenbury/tokenpanel/tokenpanel
             brew tap benbrackenbury/tokenpanel https://github.com/benbrackenbury/TokenPanel
             brew install --cask tokenpanel
             ```
