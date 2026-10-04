@@ -8,10 +8,19 @@ import Sparkle
 @MainActor
 final class AppUpdater {
     var currentVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+        #if DEBUG
+        return "\(version) (debug)"
+        #else
+        return version
+        #endif
     }
 
     var isEnabled: Bool { Self.shouldCheckForUpdates }
+
+    var disabledReason: String {
+        "Update checks are off for local Xcode builds."
+    }
 
     #if os(macOS)
     private let sparkleDelegate = SparkleDelegate()

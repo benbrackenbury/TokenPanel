@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode.app
@@ -73,8 +75,19 @@ jobs:
           fi
           echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
           echo "Built: $APP_PATH"
-          defaults read "$APP_PATH/Contents/Info" CFBundleShortVersionString || true
-          defaults read "$APP_PATH/Contents/Info" CFBundleVersion || true
+          SHORT="$(defaults read "$APP_PATH/Contents/Info" CFBundleShortVersionString)"
+          BUNDLE_VERSION="$(defaults read "$APP_PATH/Contents/Info" CFBundleVersion)"
+          echo "CFBundleShortVersionString=$SHORT CFBundleVersion=$BUNDLE_VERSION"
+          if [[ "$SHORT" != "$VERSION" ]]; then
+            echo "Stamped version $SHORT does not match tag $VERSION"
+            exit 1
+          fi
+          # 0.3.0 shipped CFBundleVersion=1 from a shallow clone. Sparkle
+          # compares this integer; it must keep increasing.
+          if [[ ! "$BUNDLE_VERSION" =~ ^[0-9]+$ ]] || [[ "$BUNDLE_VERSION" -le 1 ]]; then
+            echo "CFBundleVersion must be an integer > 1 (got: $BUNDLE_VERSION)"
+            exit 1
+          fi
 
       - name: Ad-hoc sign app
         run: |

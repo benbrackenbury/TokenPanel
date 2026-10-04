@@ -75,7 +75,7 @@ struct SettingsView: View {
                             updater.check()
                         }
                     } else {
-                        Text("Updates are off while running from Xcode.")
+                        Text(updater.disabledReason)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
