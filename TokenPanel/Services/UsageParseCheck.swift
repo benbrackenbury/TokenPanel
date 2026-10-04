@@ -13,6 +13,22 @@ enum UsageParseCheck {
             precondition(a.usedPercent == 22 && a.features.contains(where: { $0.id == "week" }))
             let x = try CodexUsageClient.parse(codex)
             precondition(x.usedPercent == 6 && x.features.first?.id == "month" && x.identity.email == "a@b.c")
+
+            let snapshot = UsageSnapshot(
+                provider: .cursor,
+                usedPercent: c.usedPercent,
+                periodStart: c.periodStart,
+                resetsAt: c.resetsAt,
+                features: c.features,
+                identity: c.identity,
+                source: "check",
+                fetchedAt: Date()
+            )
+            let roundtrip = try JSONDecoder().decode(
+                UsageSnapshot.self,
+                from: try JSONEncoder().encode(snapshot)
+            )
+            precondition(roundtrip.usedPercent == 12.5 && roundtrip.provider == .cursor)
         } catch {
             assertionFailure("usage parse check failed: \(error)")
         }

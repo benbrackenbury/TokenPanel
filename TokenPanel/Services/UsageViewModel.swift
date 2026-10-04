@@ -1,5 +1,8 @@
 import Foundation
 import Observation
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 @Observable
 @MainActor
@@ -74,6 +77,11 @@ final class UsageViewModel {
         } else {
             lastError = nil
         }
+
+        WidgetCache.save(snapshots)
+        #if canImport(WidgetKit)
+        WidgetCenter.shared.reloadAllTimelines()
+        #endif
     }
 
     var menuBarProviders: [ProviderID] {
@@ -114,10 +122,7 @@ final class UsageViewModel {
     }
 
     func formatPercent(_ value: Double) -> String {
-        if value < 1, value > 0 {
-            return String(format: "%.1f%%", value)
-        }
-        return String(format: "%.0f%%", value)
+        snapshot.formatPercent(value)
     }
 
     func authPath(for provider: ProviderID) -> String {

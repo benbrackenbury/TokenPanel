@@ -61,6 +61,13 @@ struct SettingsView: View {
                         }
                 }
 
+                Section("Widgets") {
+                    Text("Desktop widgets are in the macOS widget gallery under TokenPanel. Each widget has a toggle for Grok, Cursor, Claude, and Codex, so one tile can show a single provider or several. Keep TokenPanel running so the numbers stay current.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 Section("Updates") {
                     LabeledContent("This version", value: updater.currentVersion)
                     if updater.isEnabled {

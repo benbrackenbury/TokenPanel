@@ -8,5 +8,9 @@
 	<!-- Sparkle cannot load from an ad-hoc signed host with library validation on. -->
 	<key>com.apple.security.cs.disable-library-validation</key>
 	<true/>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.devplaceholder.P74EYVEP.TokenPanel</string>
+	</array>
 </dict>
 </plist>
