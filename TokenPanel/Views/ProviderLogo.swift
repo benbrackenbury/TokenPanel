@@ -1,6 +1,8 @@
 import SwiftUI
 #if canImport(AppKit)
 import AppKit
+import CoreText
+import ImageIO
 #endif
 
 struct ProviderLogo: View {
@@ -43,11 +45,11 @@ extension ProviderID {
     }
 
     fileprivate func cgLogo() -> CGImage? {
-        let base = NSImage(resource: ImageResource(name: logoName, bundle: .main))
-        guard base.size.width > 0, base.size.height > 0 else { return nil }
-        base.isTemplate = false
-        var proposed = NSRect(origin: .zero, size: base.size)
-        return base.cgImage(forProposedRect: &proposed, context: nil, hints: nil)
+        guard let base = NSImage(named: logoName),
+              let tiff = base.tiffRepresentation,
+              let source = CGImageSourceCreateWithData(tiff as CFData, nil)
+        else { return nil }
+        return CGImageSourceCreateImageAtIndex(source, 0, nil)
     }
 }
 
@@ -73,50 +75,46 @@ enum MenuBarCluster {
 
         let size = NSSize(width: max(width, icon), height: icon)
         let scale = NSScreen.main?.backingScaleFactor ?? 2
-        guard let rep = NSBitmapImageRep(
-            bitmapDataPlanes: nil,
-            pixelsWide: max(1, Int((size.width * scale).rounded())),
-            pixelsHigh: max(1, Int((size.height * scale).rounded())),
-            bitsPerSample: 8,
-            samplesPerPixel: 4,
-            hasAlpha: true,
-            isPlanar: false,
-            colorSpaceName: .deviceRGB,
+        let pixelsWide = max(1, Int((size.width * scale).rounded()))
+        let pixelsHigh = max(1, Int((size.height * scale).rounded()))
+        // Core Graphics only. NSGraphicsContext during MenuBarExtra setup traps (0.3.3 crash).
+        guard let ctx = CGContext(
+            data: nil,
+            width: pixelsWide,
+            height: pixelsHigh,
+            bitsPerComponent: 8,
             bytesPerRow: 0,
-            bitsPerPixel: 0
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else {
             return NSImage(size: size)
         }
-        rep.size = size
+        ctx.scaleBy(x: scale, y: scale)
+        ctx.interpolationQuality = .high
 
-        // Bitmap, not NSCustomImageRep. MenuBarExtra often skips nested drawing handlers.
-        let glyphs = providers.map { $0.glyphImage(points: icon, template: false) }
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-        NSGraphicsContext.current?.imageInterpolation = .high
         var x: CGFloat = 0
-        for (index, glyph) in glyphs.enumerated() {
+        for (index, provider) in providers.enumerated() {
             if index > 0 { x += gap }
-            glyph.draw(
-                in: NSRect(x: x, y: 0, width: icon, height: icon),
-                from: .zero,
-                operation: .sourceOver,
-                fraction: 1
-            )
+            if let cg = provider.cgLogo() {
+                ctx.draw(cg, in: CGRect(x: x, y: 0, width: icon, height: icon))
+            }
             x += icon
-            let title = titles[index]
+            let title = index < titles.count ? titles[index] : ""
             if !title.isEmpty {
                 x += inner
-                let textSize = (title as NSString).size(withAttributes: attrs)
-                let y = (icon - textSize.height) / 2
-                (title as NSString).draw(at: NSPoint(x: x, y: y), withAttributes: attrs)
-                x += textSize.width
+                let line = CTLineCreateWithAttributedString(NSAttributedString(string: title, attributes: attrs))
+                var ascent: CGFloat = 0
+                var descent: CGFloat = 0
+                var leading: CGFloat = 0
+                let textWidth = CTLineGetTypographicBounds(line, &ascent, &descent, &leading)
+                ctx.textPosition = CGPoint(x: x, y: (icon - (ascent + descent)) / 2 + descent)
+                CTLineDraw(line, ctx)
+                x += textWidth
             }
         }
-        NSGraphicsContext.restoreGraphicsState()
 
-        let image = NSImage(size: size)
-        image.addRepresentation(rep)
+        guard let cgImage = ctx.makeImage() else { return NSImage(size: size) }
+        let image = NSImage(cgImage: cgImage, size: size)
         image.isTemplate = true
         return image
     }
