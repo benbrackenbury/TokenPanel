@@ -1,6 +1,8 @@
 # TokenPanel
 
-<img src="docs/screenshot.png" width="340" alt="TokenPanel usage panel">
+<img src="docs/menubar.png" alt="TokenPanel in the menu bar">
+
+<img src="docs/panel.jpg" width="376" alt="TokenPanel usage panel">
 
 macOS menu bar app for plan usage on Grok, Cursor, Claude Code, and Codex / ChatGPT.
 
