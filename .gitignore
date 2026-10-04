@@ -48,6 +48,7 @@ fastlane/test_output
 .vim
 
 # Secrets & local env
+.sparkle_eddsa.key
 .env
 .env.*
 !.env.example

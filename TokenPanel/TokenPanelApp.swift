@@ -3,13 +3,14 @@ import SwiftUI
 @main
 struct TokenPanelApp: App {
     @State private var viewModel = UsageViewModel()
+    @State private var updater = AppUpdater()
 
     var body: some Scene {
         #if os(macOS)
         // Settings open as a sheet from the menu panel — MenuBarExtra + LSUIElement
         // apps often fail to present the system Settings scene via openSettings().
         MenuBarExtra {
-            MenuPanelView(viewModel: viewModel)
+            MenuPanelView(viewModel: viewModel, updater: updater)
                 .task { viewModel.start() }
         } label: {
             Image(nsImage: MenuBarCluster.image(
@@ -23,7 +24,7 @@ struct TokenPanelApp: App {
         .menuBarExtraStyle(.window)
         #else
         WindowGroup {
-            MenuPanelView(viewModel: viewModel)
+            MenuPanelView(viewModel: viewModel, updater: updater)
                 .task { viewModel.start() }
         }
         #endif

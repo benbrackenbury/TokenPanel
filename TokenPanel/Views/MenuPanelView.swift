@@ -5,6 +5,7 @@ import AppKit
 
 struct MenuPanelView: View {
     @Bindable var viewModel: UsageViewModel
+    @Bindable var updater: AppUpdater
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -33,11 +34,11 @@ struct MenuPanelView: View {
     @ViewBuilder
     private var settingsSheet: some View {
         #if os(macOS)
-        SettingsView(viewModel: viewModel)
-            .frame(width: 440, height: 520)
+        SettingsView(viewModel: viewModel, updater: updater)
+            .frame(width: 440, height: 580)
         #else
         NavigationStack {
-            SettingsView(viewModel: viewModel)
+            SettingsView(viewModel: viewModel, updater: updater)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") { viewModel.showingSettings = false }
@@ -349,5 +350,5 @@ struct MenuPanelView: View {
 }
 
 #Preview {
-    MenuPanelView(viewModel: UsageViewModel())
+    MenuPanelView(viewModel: UsageViewModel(), updater: AppUpdater())
 }

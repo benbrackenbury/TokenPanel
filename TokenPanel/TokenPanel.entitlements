@@ -5,5 +5,8 @@
 	<!-- App Sandbox is intentionally off so TokenPanel can read ~/.grok/auth.json
 	     written by `grok login`. Temporary sandbox exceptions are unreliable with
 	     ad-hoc / automatic development signing. -->
+	<!-- Sparkle cannot load from an ad-hoc signed host with library validation on. -->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
 </dict>
 </plist>

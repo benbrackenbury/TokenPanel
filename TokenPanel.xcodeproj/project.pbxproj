@@ -7,21 +7,36 @@
 	objects = {
 
 /* Begin PBXFileReference section */
+		000000000000000000000200 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; platformFilters = (macos, ); productRef = 000000000000000000000220 /* Sparkle */; };
 		000000000000000000000120 /* TokenPanel.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TokenPanel.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		000000000000000000000010 /* TokenPanel */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				000000000000000000000015 /* Exceptions for "TokenPanel" folder in "TokenPanel" target */,
+			);
 			path = TokenPanel;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		000000000000000000000015 /* Exceptions for "TokenPanel" folder in "TokenPanel" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 000000000000000100000000 /* TokenPanel */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		000000000000000130000000 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				000000000000000000000200 /* Sparkle in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -60,6 +75,9 @@
 				000000000000000000000010 /* TokenPanel */,
 			);
 			name = TokenPanel;
+			packageProductDependencies = (
+				000000000000000000000220 /* Sparkle */,
+			);
 			productName = MyApp;
 			productReference = 000000000000000000000120 /* TokenPanel.app */;
 			productType = "com.apple.product-type.application";
@@ -88,6 +106,9 @@
 			);
 			mainGroup = 000000000000000000000001;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				000000000000000000000210 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 000000000000000000000020 /* Products */;
 			projectDirPath = "";
@@ -256,8 +277,9 @@
 				CURRENT_PROJECT_VERSION = 0.1.0;
 				DEVELOPMENT_TEAM = ZZ3B2YY292;
 				ENABLE_APP_SANDBOX = NO;
-																												ENABLE_PREVIEWS = YES;
-																																								GENERATE_INFOPLIST_FILE = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TokenPanel/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TokenPanel;
 				"INFOPLIST_KEY_LSUIElement[sdk=macosx*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -297,8 +319,9 @@
 				CURRENT_PROJECT_VERSION = 0.1.0;
 				DEVELOPMENT_TEAM = ZZ3B2YY292;
 				ENABLE_APP_SANDBOX = NO;
-																												ENABLE_PREVIEWS = YES;
-																																								GENERATE_INFOPLIST_FILE = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TokenPanel/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TokenPanel;
 				"INFOPLIST_KEY_LSUIElement[sdk=macosx*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -349,6 +372,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		000000000000000000000210 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.10.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		000000000000000000000220 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000210 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 000000000000000000000000 /* Project object */;
 }

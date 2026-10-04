@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @Bindable var viewModel: UsageViewModel
+    @Bindable var updater: AppUpdater
     @State private var refreshMinutes: Int = 5
     @State private var showMenuBarPercentage: Bool = true
     @State private var statusMessage: String?
@@ -58,6 +59,19 @@ struct SettingsView: View {
                         .onChange(of: showMenuBarPercentage) { _, newValue in
                             viewModel.setShowMenuBarPercentage(newValue)
                         }
+                }
+
+                Section("Updates") {
+                    LabeledContent("This version", value: updater.currentVersion)
+                    if updater.isEnabled {
+                        Button("Check for Updates") {
+                            updater.check()
+                        }
+                    } else {
+                        Text("Updates are off while running from Xcode.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 ForEach(ProviderID.allCases) { provider in
@@ -200,5 +214,5 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView(viewModel: UsageViewModel())
+    SettingsView(viewModel: UsageViewModel(), updater: AppUpdater())
 }
