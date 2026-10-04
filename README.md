@@ -56,14 +56,3 @@ Look for the TokenPanel icon in the menu bar (there is no Dock icon).
 - Links open that product’s usage and billing pages
 
 If numbers stop loading, sign in again in that product (sessions expire), then refresh.
-
-## Releases
-
-Pushing a version tag builds a macOS app and publishes a DMG on GitHub Releases:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-Tags must look like `v1.0.0` (optional pre-release suffixes such as `v1.0.0-beta.1` are treated as pre-releases). Builds are ad-hoc signed, not notarized.
