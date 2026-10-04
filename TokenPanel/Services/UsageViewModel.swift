@@ -4,18 +4,33 @@ import Observation
 @Observable
 @MainActor
 final class UsageViewModel {
-    var snapshot: GrokUsageSnapshot = .empty
+    var snapshots: [ProviderID: UsageSnapshot] = [:]
+    var errors: [ProviderID: String] = [:]
+    var configured: [ProviderID] = []
+    var selectedProvider: ProviderID = Preferences.selectedProvider
     var isLoading = false
     var lastError: String?
     var isConfigured = false
     var showingSettings = false
-    /// Mirrored from Preferences so the menu bar label updates live.
     var showMenuBarPercentage: Bool = Preferences.showMenuBarPercentage
+    var showAllMenuBarProviders: Bool = Preferences.showAllMenuBarProviders
 
-    private let client = GrokCreditsClient()
+    private let fetchers: [any UsageFetching] = [
+        GrokCreditsClient(),
+        CursorUsageClient(),
+        ClaudeUsageClient(),
+        CodexUsageClient()
+    ]
     private var refreshTask: Task<Void, Never>?
 
+    var snapshot: UsageSnapshot {
+        snapshots[selectedProvider] ?? .empty(selectedProvider)
+    }
+
     func start() {
+        #if DEBUG
+        UsageParseCheck.run()
+        #endif
         refreshTask?.cancel()
         refreshTask = Task { [weak self] in
             await self?.refreshLoop()
@@ -27,59 +42,65 @@ final class UsageViewModel {
         refreshTask = nil
     }
 
+    func select(_ provider: ProviderID) {
+        selectedProvider = provider
+        Preferences.selectedProvider = provider
+        lastError = errors[provider]
+        isConfigured = configured.contains(provider) || snapshots[provider] != nil
+    }
+
     func refresh() async {
         isLoading = true
         defer { isLoading = false }
 
-        do {
-            let (_, identity) = try GrokAuthStore.load()
-            isConfigured = true
-            var usage = try await client.fetchUsage()
-            // Preserve identity even if server payload omits it.
-            if usage.identity == nil {
-                usage.identity = identity
+        configured = ProviderID.allCases.filter { id in
+            fetchers.contains { $0.provider == id && $0.isConfigured }
+        }
+
+        for fetcher in fetchers where fetcher.isConfigured {
+            do {
+                snapshots[fetcher.provider] = try await fetcher.fetch()
+                errors[fetcher.provider] = nil
+            } catch {
+                errors[fetcher.provider] = error.localizedDescription
             }
-            if let expires = identity.expiresAt, expires <= Date() {
-                lastError = "Session may be expired — if refresh fails, run `grok login`."
-            } else {
-                lastError = nil
-            }
-            snapshot = usage
-        } catch let error as TokenPanelError {
-            switch error {
-            case .missingCredentials, .missingCredentialsDetail, .authFileUnreadable:
-                isConfigured = false
-            default:
-                isConfigured = Preferences.isConfigured
-            }
-            lastError = error.localizedDescription
-        } catch {
-            lastError = error.localizedDescription
+        }
+
+        isConfigured = configured.contains(selectedProvider) || snapshots[selectedProvider]?.usedPercent != nil
+        if let selectedError = errors[selectedProvider] {
+            lastError = selectedError
+        } else if !isConfigured {
+            lastError = TokenPanelError.notSignedIn(selectedProvider).localizedDescription
+        } else {
+            lastError = nil
         }
     }
 
-    /// Text shown in the menu bar when percentage display is enabled.
+    var menuBarProviders: [ProviderID] {
+        if showAllMenuBarProviders {
+            if !configured.isEmpty { return configured }
+            let known = ProviderID.allCases.filter { snapshots[$0] != nil }
+            if !known.isEmpty { return known }
+        }
+        return [selectedProvider]
+    }
+
+    var menuBarSignature: String {
+        menuBarProviders.map { "\($0.rawValue):\(menuBarTitle(for: $0))" }.joined(separator: "|")
+            + "|\(showMenuBarPercentage)|\(showAllMenuBarProviders)"
+    }
+
     var menuBarTitle: String {
-        if let used = snapshot.usedPercent {
+        menuBarTitle(for: selectedProvider)
+    }
+
+    func menuBarTitle(for provider: ProviderID) -> String {
+        if let used = snapshots[provider]?.usedPercent {
             return "\(Int(used.rounded()))%"
         }
         if isLoading { return "…" }
-        if lastError != nil { return "!" }
-        return "Grok"
-    }
-
-    var menuBarSystemImage: String {
-        if !isConfigured { return "person.crop.circle.badge.questionmark" }
-        if lastError != nil, snapshot.usedPercent == nil {
-            return "exclamationmark.triangle"
-        }
-        if let used = snapshot.usedPercent {
-            if used >= 95 { return "gauge.with.dots.needle.100percent" }
-            if used >= 80 { return "gauge.with.dots.needle.67percent" }
-            if used >= 40 { return "gauge.with.dots.needle.50percent" }
-            return "gauge.with.dots.needle.33percent"
-        }
-        return "brain.head.profile"
+        if errors[provider] != nil { return "!" }
+        return ""
     }
 
     func setShowMenuBarPercentage(_ value: Bool) {
@@ -87,11 +108,25 @@ final class UsageViewModel {
         showMenuBarPercentage = value
     }
 
+    func setShowAllMenuBarProviders(_ value: Bool) {
+        Preferences.showAllMenuBarProviders = value
+        showAllMenuBarProviders = value
+    }
+
     func formatPercent(_ value: Double) -> String {
         if value < 1, value > 0 {
             return String(format: "%.1f%%", value)
         }
         return String(format: "%.0f%%", value)
+    }
+
+    func authPath(for provider: ProviderID) -> String {
+        switch provider {
+        case .grok: return GrokAuthStore.authFileURL().path
+        case .cursor: return CursorAuthStore.stateDBURL().path
+        case .claude: return ClaudeAuthStore.credentialsFileURL().path
+        case .codex: return CodexAuthStore.authFileURL().path
+        }
     }
 
     private func refreshLoop() async {

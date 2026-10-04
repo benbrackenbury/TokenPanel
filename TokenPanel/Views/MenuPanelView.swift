@@ -9,14 +9,18 @@ struct MenuPanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
-            Divider()
+            if viewModel.configured.count > 1 {
+                providerSwitcher
+                Divider()
+            } else {
+                Divider()
+            }
             content
             Divider()
             footer
         }
         #if os(macOS)
         .frame(width: 340)
-        // Tall enough for hero + a few feature rows without scrolling on typical setups.
         .frame(minHeight: 520, idealHeight: 580, maxHeight: 720)
         #else
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -30,7 +34,7 @@ struct MenuPanelView: View {
     private var settingsSheet: some View {
         #if os(macOS)
         SettingsView(viewModel: viewModel)
-            .frame(width: 440, height: 420)
+            .frame(width: 440, height: 520)
         #else
         NavigationStack {
             SettingsView(viewModel: viewModel)
@@ -43,15 +47,12 @@ struct MenuPanelView: View {
         #endif
     }
 
-    // MARK: - Header
-
     private var header: some View {
         HStack(spacing: 10) {
-            Image(systemName: "brain.head.profile")
-                .font(.title2)
+            ProviderLogo(provider: viewModel.selectedProvider, size: 22)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Grok usage")
+                Text("\(viewModel.selectedProvider.displayName) usage")
                     .font(.headline)
                 Text(subtitle)
                     .font(.caption)
@@ -77,6 +78,21 @@ struct MenuPanelView: View {
         .padding(14)
     }
 
+    private var providerSwitcher: some View {
+        Picker("Provider", selection: Binding(
+            get: { viewModel.selectedProvider },
+            set: { viewModel.select($0) }
+        )) {
+            ForEach(viewModel.configured) { provider in
+                Text(provider.displayName).tag(provider)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 10)
+        .labelsHidden()
+    }
+
     private var subtitle: String {
         if let email = viewModel.snapshot.identity?.email {
             return email
@@ -89,10 +105,8 @@ struct MenuPanelView: View {
             formatter.unitsStyle = .abbreviated
             return "Updated \(formatter.localizedString(for: viewModel.snapshot.fetchedAt, relativeTo: Date()))"
         }
-        return "Chat · Voice · Build · Imagine"
+        return viewModel.selectedProvider.displayName
     }
-
-    // MARK: - Content
 
     @ViewBuilder
     private var content: some View {
@@ -100,7 +114,7 @@ struct MenuPanelView: View {
             setupOrError(error)
                 .padding(14)
         } else if viewModel.snapshot.usedPercent == nil && !viewModel.isConfigured {
-            setupOrError(TokenPanelError.missingCredentials.localizedDescription)
+            setupOrError(TokenPanelError.notSignedIn(viewModel.selectedProvider).localizedDescription)
                 .padding(14)
         } else {
             ScrollView {
@@ -117,7 +131,6 @@ struct MenuPanelView: View {
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            // Allow the panel to grow; only scroll when content exceeds available height.
             .frame(maxHeight: .infinity)
         }
     }
@@ -180,10 +193,6 @@ struct MenuPanelView: View {
                         .controlSize(.small)
                 }
             }
-
-            Text("Feature labels are best-effort mappings of Grok’s product buckets.")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
         }
         .padding(10)
         .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 10))
@@ -204,8 +213,9 @@ struct MenuPanelView: View {
     }
 
     private func setupOrError(_ message: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Connect Grok")
+        let provider = viewModel.selectedProvider
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Connect \(provider.displayName)")
                 .font(.subheadline.weight(.semibold))
             Text(message)
                 .font(.caption)
@@ -213,19 +223,21 @@ struct MenuPanelView: View {
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Uses `\(GrokAuthStore.authFileURL().path)` from `grok login`, then loads usage from grok.com.")
+            Text(connectHint(for: provider))
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
 
             #if os(macOS)
-            Button("Copy login command") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString("grok login", forType: .string)
+            if provider != .cursor {
+                Button("Copy login command") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(provider.loginCommand, forType: .string)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
             #endif
 
             HStack {
@@ -244,7 +256,18 @@ struct MenuPanelView: View {
         }
     }
 
-    // MARK: - Footer
+    private func connectHint(for provider: ProviderID) -> String {
+        switch provider {
+        case .grok:
+            return "Uses `\(GrokAuthStore.authFileURL().path)` from `grok login`, then loads usage from grok.com."
+        case .cursor:
+            return "Reads Cursor’s local session, then loads usage from cursor.com. Sign in inside Cursor first."
+        case .claude:
+            return "Uses Claude Code’s local login, then loads plan usage from Anthropic. Run `claude` once if this is empty."
+        case .codex:
+            return "Uses `\(CodexAuthStore.authFileURL().path)` from `codex login`, then loads usage from ChatGPT."
+        }
+    }
 
     private var footer: some View {
         HStack {
@@ -255,10 +278,10 @@ struct MenuPanelView: View {
 
             Spacer()
 
-            Link("Usage", destination: URL(string: "https://grok.com/?_s=usage")!)
+            Link("Usage", destination: viewModel.selectedProvider.usageURL)
                 .font(.caption)
 
-            Link("Billing", destination: URL(string: "https://grok.com/?_s=billing")!)
+            Link("Billing", destination: viewModel.selectedProvider.billingURL)
                 .font(.caption)
 
             #if os(macOS)
@@ -274,8 +297,6 @@ struct MenuPanelView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
     }
-
-    // MARK: - Helpers
 
     private func labeledRow(_ title: String, _ value: String) -> some View {
         HStack {
@@ -309,14 +330,19 @@ struct MenuPanelView: View {
         return .green
     }
 
-    private func icon(for featureID: UInt64) -> String {
+    private func icon(for featureID: String) -> String {
         switch featureID {
-        case 1: return "bubble.left.and.bubble.right"
-        case 2: return "waveform"
-        case 3: return "photo"
-        case 4: return "video"
-        case 5: return "magnifyingglass"
-        case 6: return "hammer"
+        case "1": return "bubble.left.and.bubble.right"
+        case "2": return "waveform"
+        case "3": return "photo"
+        case "4": return "video"
+        case "5": return "magnifyingglass"
+        case "6": return "hammer"
+        case "5h", "primary": return "clock"
+        case "week", "secondary", "month": return "calendar"
+        case "week-opus", "week-sonnet": return "calendar.badge.clock"
+        case "auto": return "sparkle"
+        case "api": return "chevron.left.forwardslash.chevron.right"
         default: return "circle.grid.2x2"
         }
     }
