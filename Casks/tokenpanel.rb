@@ -1,6 +1,6 @@
 cask "tokenpanel" do
-  version "0.3.3"
-  sha256 "44697e10810bb9407878e1e299a2b82abc991a129d2986202bfb5f01eff92f13"
+  version "0.3.4"
+  sha256 "573e5aaefb39eeff41e1db63b4fc0395c30fbedd605b71bee153b182e834b145"
 
   url "https://github.com/benbrackenbury/TokenPanel/releases/download/v#{version}/TokenPanel-#{version}.dmg"
   name "TokenPanel"
