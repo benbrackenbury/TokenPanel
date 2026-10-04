@@ -9,7 +9,6 @@ struct TokenPanelApp: App {
         #if os(macOS)
         MenuBarExtra {
             MenuPanelView(viewModel: viewModel, updater: updater)
-                .task { viewModel.start() }
         } label: {
             Image(nsImage: MenuBarCluster.image(
                 providers: viewModel.menuBarProviders,
@@ -17,7 +16,9 @@ struct TokenPanelApp: App {
                     viewModel.showMenuBarPercentage ? viewModel.menuBarTitle(for: $0) : ""
                 }
             ))
+            .renderingMode(.template)
             .id(viewModel.menuBarSignature)
+            .task { viewModel.start() }
         }
         .menuBarExtraStyle(.window)
 

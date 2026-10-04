@@ -45,9 +45,9 @@ extension ProviderID {
     }
 
     fileprivate func cgLogo() -> CGImage? {
-        guard let base = NSImage(named: logoName),
-              let tiff = base.tiffRepresentation,
-              let source = CGImageSourceCreateWithData(tiff as CFData, nil)
+        // ImageIO on the bundled PNG. NSImage/NSGraphicsContext trap during MenuBarExtra setup.
+        guard let url = Bundle.main.url(forResource: logoName, withExtension: "png"),
+              let source = CGImageSourceCreateWithURL(url as CFURL, nil)
         else { return nil }
         return CGImageSourceCreateImageAtIndex(source, 0, nil)
     }
@@ -56,6 +56,7 @@ extension ProviderID {
 enum MenuBarCluster {
     static func image(providers: [ProviderID], titles: [String]) -> NSImage {
         let icon: CGFloat = 16
+        let bar: CGFloat = 18
         let gap: CGFloat = 8
         let inner: CGFloat = 3
         let font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
@@ -73,7 +74,7 @@ enum MenuBarCluster {
             }
         }
 
-        let size = NSSize(width: max(width, icon), height: icon)
+        let size = NSSize(width: max(width, icon), height: bar)
         let scale = NSScreen.main?.backingScaleFactor ?? 2
         let pixelsWide = max(1, Int((size.width * scale).rounded()))
         let pixelsHigh = max(1, Int((size.height * scale).rounded()))
@@ -93,10 +94,11 @@ enum MenuBarCluster {
         ctx.interpolationQuality = .high
 
         var x: CGFloat = 0
+        let iconY = (bar - icon) / 2
         for (index, provider) in providers.enumerated() {
             if index > 0 { x += gap }
             if let cg = provider.cgLogo() {
-                ctx.draw(cg, in: CGRect(x: x, y: 0, width: icon, height: icon))
+                ctx.draw(cg, in: CGRect(x: x, y: iconY, width: icon, height: icon))
             }
             x += icon
             let title = index < titles.count ? titles[index] : ""
@@ -107,14 +109,17 @@ enum MenuBarCluster {
                 var descent: CGFloat = 0
                 var leading: CGFloat = 0
                 let textWidth = CTLineGetTypographicBounds(line, &ascent, &descent, &leading)
-                ctx.textPosition = CGPoint(x: x, y: (icon - (ascent + descent)) / 2 + descent)
+                ctx.textPosition = CGPoint(x: x, y: (bar - (ascent + descent)) / 2 + descent)
                 CTLineDraw(line, ctx)
                 x += textWidth
             }
         }
 
         guard let cgImage = ctx.makeImage() else { return NSImage(size: size) }
-        let image = NSImage(cgImage: cgImage, size: size)
+        let rep = NSBitmapImageRep(cgImage: cgImage)
+        rep.size = size
+        let image = NSImage(size: size)
+        image.addRepresentation(rep)
         image.isTemplate = true
         return image
     }
