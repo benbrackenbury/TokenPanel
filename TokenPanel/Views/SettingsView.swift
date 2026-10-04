@@ -9,7 +9,7 @@ struct SettingsView: View {
     @State private var refreshMinutes: Int = 5
     @State private var showMenuBarPercentage: Bool = true
     @State private var statusMessage: String?
-    @State private var authPath: String = ""
+    @State private var grokAuthPath: String = ""
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -30,67 +30,82 @@ struct SettingsView: View {
             #endif
 
             Form {
-                Section {
-                    LabeledContent("Auth file") {
-                        Text(authPath)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                            .lineLimit(4)
-                            .frame(maxWidth: 260, alignment: .trailing)
-                    }
-
-                    #if os(macOS)
-                    Button("Choose auth.json…") {
-                        pickAuthFile()
-                    }
-                    if UserDefaults.standard.string(forKey: "grok.authFilePath") != nil {
-                        Button("Clear custom path", role: .destructive) {
-                            UserDefaults.standard.removeObject(forKey: "grok.authFilePath")
-                            authPath = GrokAuthStore.authFileURL().path
-                            statusMessage = "Using default ~/.grok/auth.json"
+                Section("Menu bar") {
+                    Picker("Show usage for", selection: Binding(
+                        get: { viewModel.selectedProvider },
+                        set: { viewModel.select($0) }
+                    )) {
+                        ForEach(ProviderID.allCases) { provider in
+                            Label {
+                                Text(provider.displayName)
+                            } icon: {
+                                ProviderLogo(provider: provider, size: 14)
+                            }
+                            .tag(provider)
                         }
-                    }
-                    #endif
-
-                    if let identity = viewModel.snapshot.identity {
-                        if let email = identity.email {
-                            LabeledContent("Account", value: email)
-                        }
-                        if let name = identity.displayName {
-                            LabeledContent("Name", value: name)
-                        }
-                        LabeledContent("Plan", value: identity.loginLabel)
-                        if let expires = identity.expiresAt {
-                            LabeledContent(
-                                "Token expires",
-                                value: expires.formatted(date: .abbreviated, time: .shortened)
-                            )
-                        }
-                    } else {
-                        Text("No Grok session loaded yet.")
-                            .foregroundStyle(.secondary)
                     }
 
                     Stepper(value: $refreshMinutes, in: 1...60) {
                         Text("Refresh every \(refreshMinutes) min")
                     }
 
+                    Toggle("Show all providers in menu bar", isOn: Binding(
+                        get: { viewModel.showAllMenuBarProviders },
+                        set: { viewModel.setShowAllMenuBarProviders($0) }
+                    ))
+
                     Toggle("Show percentage in menu bar", isOn: $showMenuBarPercentage)
                         .onChange(of: showMenuBarPercentage) { _, newValue in
                             viewModel.setShowMenuBarPercentage(newValue)
                         }
-                } header: {
-                    Text("Grok session")
-                } footer: {
-                    Text(footerText)
                 }
 
-                Section("What this shows") {
-                    Text("SuperGrok credit usage for Grok products (chat, voice, Build, Imagine, etc.) — not xAI API prepaid dollars.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Link("Open grok.com usage", destination: URL(string: "https://grok.com/?_s=usage")!)
+                ForEach(ProviderID.allCases) { provider in
+                    Section {
+                        LabeledContent("Status", value: status(for: provider))
+                        LabeledContent("Session") {
+                            Text(viewModel.authPath(for: provider))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                                .lineLimit(3)
+                                .frame(maxWidth: 260, alignment: .trailing)
+                        }
+
+                        if provider == .grok {
+                            #if os(macOS)
+                            Button("Choose auth.json…") {
+                                pickAuthFile()
+                            }
+                            if UserDefaults.standard.string(forKey: "grok.authFilePath") != nil {
+                                Button("Clear custom path", role: .destructive) {
+                                    UserDefaults.standard.removeObject(forKey: "grok.authFilePath")
+                                    grokAuthPath = GrokAuthStore.authFileURL().path
+                                    statusMessage = "Using default ~/.grok/auth.json"
+                                }
+                            }
+                            #endif
+                        }
+
+                        if let snap = viewModel.snapshots[provider] {
+                            if let email = snap.identity?.email {
+                                LabeledContent("Account", value: email)
+                            }
+                            if let plan = snap.identity?.loginLabel {
+                                LabeledContent("Plan", value: plan)
+                            }
+                        }
+
+                        Text(footer(for: provider))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } header: {
+                        Label {
+                            Text(provider.displayName)
+                        } icon: {
+                            ProviderLogo(provider: provider, size: 14)
+                        }
+                    }
                 }
 
                 if let statusMessage {
@@ -111,15 +126,18 @@ struct SettingsView: View {
                             await viewModel.refresh()
                             viewModel.start()
                             statusMessage = viewModel.lastError.map { "Refresh issue: \($0)" } ?? "Usage updated."
-                            authPath = GrokAuthStore.authFileURL().path
+                            grokAuthPath = GrokAuthStore.authFileURL().path
                         }
                     }
 
                     #if os(macOS)
-                    Button("Copy `grok login`") {
+                    Button("Copy login for \(viewModel.selectedProvider.displayName)") {
                         NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString("grok login", forType: .string)
-                        statusMessage = "Copied. Run it in Terminal, then refresh."
+                        NSPasteboard.general.setString(
+                            viewModel.selectedProvider.loginCommand,
+                            forType: .string
+                        )
+                        statusMessage = "Copied. Run it if needed, then refresh."
                     }
                     #endif
                 }
@@ -132,17 +150,28 @@ struct SettingsView: View {
         .onAppear {
             refreshMinutes = Preferences.refreshMinutes
             showMenuBarPercentage = Preferences.showMenuBarPercentage
-            authPath = GrokAuthStore.authFileURL().path
+            grokAuthPath = GrokAuthStore.authFileURL().path
         }
     }
 
-    private var footerText: String {
-        """
-        Sign in with the Grok Build CLI:
-          grok login
+    private func status(for provider: ProviderID) -> String {
+        if viewModel.snapshots[provider]?.usedPercent != nil { return "Connected" }
+        if let error = viewModel.errors[provider] { return error }
+        if viewModel.configured.contains(provider) { return "Session found" }
+        return "Not signed in"
+    }
 
-        TokenPanel reads ~/.grok/auth.json (or a path you choose) and calls grok.com’s credits endpoint.
-        """
+    private func footer(for provider: ProviderID) -> String {
+        switch provider {
+        case .grok:
+            return "Sign in with `grok login`. SuperGrok credits, not xAI API prepaid dollars."
+        case .cursor:
+            return "Sign in inside Cursor. TokenPanel reads the local session and Cursor’s usage endpoint."
+        case .claude:
+            return "Log in with Claude Code (`claude`). Subscription plan windows only, not API-key billing."
+        case .codex:
+            return "Sign in with `codex login`. ChatGPT Codex rate-limit windows from the local session."
+        }
     }
 
     #if os(macOS)
@@ -159,7 +188,7 @@ struct SettingsView: View {
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
         UserDefaults.standard.set(url.path, forKey: "grok.authFilePath")
-        authPath = url.path
+        grokAuthPath = url.path
         statusMessage = "Using \(url.path). Refreshing…"
         Task {
             await viewModel.refresh()

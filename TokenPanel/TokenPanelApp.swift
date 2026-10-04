@@ -12,14 +12,13 @@ struct TokenPanelApp: App {
             MenuPanelView(viewModel: viewModel)
                 .task { viewModel.start() }
         } label: {
-            // MenuBarExtra often drops Label titles — build the control explicitly.
-            HStack(spacing: 4) {
-                Image(systemName: viewModel.menuBarSystemImage)
-                if viewModel.showMenuBarPercentage {
-                    Text(viewModel.menuBarTitle)
-                        .monospacedDigit()
+            Image(nsImage: MenuBarCluster.image(
+                providers: viewModel.menuBarProviders,
+                titles: viewModel.menuBarProviders.map {
+                    viewModel.showMenuBarPercentage ? viewModel.menuBarTitle(for: $0) : ""
                 }
-            }
+            ))
+            .id(viewModel.menuBarSignature)
         }
         .menuBarExtraStyle(.window)
         #else

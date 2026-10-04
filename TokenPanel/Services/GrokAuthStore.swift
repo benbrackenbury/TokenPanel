@@ -5,30 +5,10 @@ import Darwin
 
 /// Reads SuperGrok / Grok Build credentials from `~/.grok/auth.json` (written by `grok login`).
 enum GrokAuthStore {
-    /// Real user home, not an App Sandbox container home.
-    static func realHomeDirectory() -> URL {
-        #if canImport(Darwin)
-        if let pw = getpwuid(getuid()), let dir = pw.pointee.pw_dir {
-            let path = String(cString: dir)
-            if !path.isEmpty {
-                return URL(fileURLWithPath: path, isDirectory: true)
-            }
-        }
-        #endif
+    static func realHomeDirectory() -> URL { LocalHome.realHomeDirectory() }
 
-        // Fallbacks
-        if let home = ProcessInfo.processInfo.environment["HOME"], !home.isEmpty,
-           !home.contains("/Library/Containers/") {
-            return URL(fileURLWithPath: home, isDirectory: true)
-        }
-        if let username = ProcessInfo.processInfo.environment["USER"] ?? ProcessInfo.processInfo.environment["LOGNAME"],
-           !username.isEmpty {
-            let url = URL(fileURLWithPath: "/Users/\(username)", isDirectory: true)
-            if FileManager.default.fileExists(atPath: url.path) {
-                return url
-            }
-        }
-        return FileManager.default.homeDirectoryForCurrentUser
+    static var isConfigured: Bool {
+        candidateAuthURLs().contains { FileManager.default.fileExists(atPath: $0.path) }
     }
 
     static func grokHome(env: [String: String] = ProcessInfo.processInfo.environment) -> URL {

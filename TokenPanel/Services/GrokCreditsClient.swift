@@ -6,7 +6,10 @@ import Foundation
 /// `POST https://grok.com/grok_api_v2.GrokBuildBilling/GetGrokCreditsConfig`
 /// Auth: `Authorization: Bearer <token from ~/.grok/auth.json>`
 /// Body: empty gRPC-web frame
-final class GrokCreditsClient: Sendable {
+final class GrokCreditsClient: UsageFetching, Sendable {
+    let provider: ProviderID = .grok
+    var isConfigured: Bool { GrokAuthStore.isConfigured }
+
     static let endpoint = URL(string: "https://grok.com/grok_api_v2.GrokBuildBilling/GetGrokCreditsConfig")!
 
     private let session: URLSession
@@ -15,10 +18,15 @@ final class GrokCreditsClient: Sendable {
         self.session = session
     }
 
-    func fetchUsage() async throws -> GrokUsageSnapshot {
+    func fetch() async throws -> UsageSnapshot {
+        try await fetchUsage()
+    }
+
+    func fetchUsage() async throws -> UsageSnapshot {
         let (token, identity) = try GrokAuthStore.load()
         let parsed = try await fetchCredits(token: token)
-        return GrokUsageSnapshot(
+        return UsageSnapshot(
+            provider: .grok,
             usedPercent: parsed.usedPercent,
             periodStart: parsed.periodStart,
             resetsAt: parsed.resetsAt,
@@ -114,7 +122,7 @@ final class GrokCreditsClient: Sendable {
         // feature buckets: repeated message at [1,7] with id varint field 1 and percent float field 2
         var features: [FeatureUsage] = []
         for group in scan.featureGroups {
-            features.append(FeatureUsage(id: group.id, percent: group.percent))
+            features.append(FeatureUsage(id: String(group.id), percent: group.percent))
         }
         features.sort { $0.percent > $1.percent }
 
