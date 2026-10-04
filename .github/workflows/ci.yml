@@ -10,9 +10,104 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
+  gate:
+    name: Skip docs changes
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.gate.outputs.should_build }}
+    steps:
+      - name: Skip macOS build for docs-only changes
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          BEFORE: ${{ github.event.before }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          is_docs_subject() {
+            local line="$1"
+            local re='^docs(\([^)]*\))?!?:([[:space:]]|$)'
+            [[ "$line" =~ $re ]]
+          }
+
+          is_merge_subject() {
+            local line="$1"
+            [[ "$line" == Merge\ pull\ request* || "$line" == Merge\ branch* ]]
+          }
+
+          commits=""
+          files=""
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            commits="$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/commits" --jq '.[].commit.message | split("\n")[0]')"
+            files="$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/files" --jq '.[].filename')"
+          elif [[ -z "${BEFORE:-}" || "$BEFORE" =~ ^0+$ ]]; then
+            commits="$(gh api "repos/${REPO}/commits/${SHA}" --jq '.commit.message | split("\n")[0]')"
+            files="$(gh api "repos/${REPO}/commits/${SHA}" --jq '.files[].filename // empty')"
+          else
+            commits="$(gh api "repos/${REPO}/compare/${BEFORE}...${SHA}" --jq '.commits[].commit.message | split("\n")[0]')"
+            files="$(gh api "repos/${REPO}/compare/${BEFORE}...${SHA}" --jq '.files[].filename')"
+          fi
+
+          all_docs_commits=false
+          docs_commit_count=0
+          if [[ -n "$commits" ]]; then
+            all_docs_commits=true
+            while IFS= read -r subject; do
+              [[ -z "$subject" ]] && continue
+              if is_merge_subject "$subject"; then
+                continue
+              fi
+              if ! is_docs_subject "$subject"; then
+                all_docs_commits=false
+                break
+              fi
+              docs_commit_count=$((docs_commit_count + 1))
+            done <<< "$commits"
+            if [[ "$all_docs_commits" == true && "$docs_commit_count" -eq 0 ]]; then
+              all_docs_commits=false
+            fi
+          fi
+
+          all_docs_files=false
+          if [[ -n "$files" ]]; then
+            all_docs_files=true
+            while IFS= read -r file; do
+              [[ -z "$file" ]] && continue
+              case "$file" in
+                *.md|docs|docs/*) ;;
+                *)
+                  all_docs_files=false
+                  break
+                  ;;
+              esac
+            done <<< "$files"
+          fi
+
+          should_build=true
+          if [[ "$all_docs_commits" == true || "$all_docs_files" == true ]]; then
+            should_build=false
+          fi
+
+          echo "should_build=${should_build}" >> "$GITHUB_OUTPUT"
+          echo "all_docs_commits=${all_docs_commits} all_docs_files=${all_docs_files} should_build=${should_build}"
+          if [[ -n "$files" ]]; then
+            echo "Changed files:"
+            printf '%s\n' "$files"
+          fi
+
   build:
     name: Build (macOS)
+    needs: gate
+    if: needs.gate.outputs.should_build == 'true'
     runs-on: macos-15
     timeout-minutes: 30
 
