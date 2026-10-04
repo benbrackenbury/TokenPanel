@@ -36,16 +36,18 @@ extension ProviderID {
 
     func glyphImage(points: CGFloat, template: Bool) -> NSImage {
         let dest = NSSize(width: points, height: points)
-        guard let base = NSImage(named: logoName)?.copy() as? NSImage else {
-            return NSImage(size: dest)
-        }
-        base.isTemplate = false
-        let image = NSImage(size: dest, flipped: false) { rect in
-            base.draw(in: rect)
-            return true
-        }
+        guard let cg = cgLogo() else { return NSImage(size: dest) }
+        let image = NSImage(cgImage: cg, size: dest)
         image.isTemplate = template
         return image
+    }
+
+    fileprivate func cgLogo() -> CGImage? {
+        let base = NSImage(resource: ImageResource(name: logoName, bundle: .main))
+        guard base.size.width > 0, base.size.height > 0 else { return nil }
+        base.isTemplate = false
+        var proposed = NSRect(origin: .zero, size: base.size)
+        return base.cgImage(forProposedRect: &proposed, context: nil, hints: nil)
     }
 }
 
@@ -69,27 +71,52 @@ enum MenuBarCluster {
             }
         }
 
-        // Load glyphs before the drawing block. NSImage(named:) inside it
-        // can return nil (or the image being created).
-        let glyphs = providers.map { $0.glyphImage(points: icon, template: false) }
         let size = NSSize(width: max(width, icon), height: icon)
-        let image = NSImage(size: size, flipped: false) { _ in
-            var x: CGFloat = 0
-            for (index, glyph) in glyphs.enumerated() {
-                if index > 0 { x += gap }
-                glyph.draw(in: NSRect(x: x, y: 0, width: icon, height: icon))
-                x += icon
-                let title = titles[index]
-                if !title.isEmpty {
-                    x += inner
-                    let textSize = (title as NSString).size(withAttributes: attrs)
-                    let y = (icon - textSize.height) / 2
-                    (title as NSString).draw(at: NSPoint(x: x, y: y), withAttributes: attrs)
-                    x += textSize.width
-                }
-            }
-            return true
+        let scale = NSScreen.main?.backingScaleFactor ?? 2
+        guard let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: max(1, Int((size.width * scale).rounded())),
+            pixelsHigh: max(1, Int((size.height * scale).rounded())),
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ) else {
+            return NSImage(size: size)
         }
+        rep.size = size
+
+        // Bitmap, not NSCustomImageRep. MenuBarExtra often skips nested drawing handlers.
+        let glyphs = providers.map { $0.glyphImage(points: icon, template: false) }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        NSGraphicsContext.current?.imageInterpolation = .high
+        var x: CGFloat = 0
+        for (index, glyph) in glyphs.enumerated() {
+            if index > 0 { x += gap }
+            glyph.draw(
+                in: NSRect(x: x, y: 0, width: icon, height: icon),
+                from: .zero,
+                operation: .sourceOver,
+                fraction: 1
+            )
+            x += icon
+            let title = titles[index]
+            if !title.isEmpty {
+                x += inner
+                let textSize = (title as NSString).size(withAttributes: attrs)
+                let y = (icon - textSize.height) / 2
+                (title as NSString).draw(at: NSPoint(x: x, y: y), withAttributes: attrs)
+                x += textSize.width
+            }
+        }
+        NSGraphicsContext.restoreGraphicsState()
+
+        let image = NSImage(size: size)
+        image.addRepresentation(rep)
         image.isTemplate = true
         return image
     }
