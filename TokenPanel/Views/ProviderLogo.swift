@@ -8,12 +8,22 @@ struct ProviderLogo: View {
     var size: CGFloat = 22
 
     var body: some View {
-        Image(provider.logoName)
+        logoImage
             .resizable()
             .renderingMode(.template)
             .scaledToFit()
             .frame(width: size, height: size)
             .accessibilityLabel(provider.displayName)
+    }
+
+    private var logoImage: Image {
+        #if WIDGET_PREVIEW_RENDER
+        if let path = ProcessInfo.processInfo.environment["TOKENPANEL_LOGO_\(provider.rawValue.uppercased())"],
+           let nsImage = NSImage(contentsOfFile: path) {
+            return Image(nsImage: nsImage)
+        }
+        #endif
+        return Image(provider.logoName)
     }
 }
 

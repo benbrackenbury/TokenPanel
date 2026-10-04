@@ -45,6 +45,8 @@ Look for TokenPanel in the menu bar. There is no Dock icon.
 - Refresh updates numbers immediately
 - Settings chooses which provider's percentage shows in the menu bar, or shows all connected sessions at once. You can also change the auto-refresh interval, hide the percentage, and point at a different Grok session file.
 
+Desktop widgets (small, medium, large, extra large) live in the macOS widget gallery under TokenPanel. Edit Widget has a toggle for each provider, so one tile can show just Grok or several at once. Widgets read the last refresh from the menu bar app, so keep TokenPanel running.
+
 If numbers stop loading, sign in again in that product (sessions expire), then refresh.
 
 ## How it works
