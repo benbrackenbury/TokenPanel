@@ -8,7 +8,16 @@ It does not track xAI, Anthropic, or OpenAI developer API prepaid balances. Clau
 
 ## Install
 
-**Latest:** [TokenPanel 0.2.0](https://github.com/benbrackenbury/TokenPanel/releases/tag/v0.2.0)
+**Homebrew (recommended):**
+
+```bash
+brew tap benbrackenbury/tokenpanel https://github.com/benbrackenbury/TokenPanel
+brew install --cask tokenpanel
+```
+
+Stable version tags also bump this tap after the GitHub Release is published. Then `brew upgrade --cask tokenpanel`.
+
+**Latest DMG:** [TokenPanel 0.2.0](https://github.com/benbrackenbury/TokenPanel/releases/tag/v0.2.0)
 
 1. Download `TokenPanel-0.2.0.dmg`
 2. Open the DMG and drag TokenPanel to Applications
