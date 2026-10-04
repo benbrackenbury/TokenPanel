@@ -1,5 +1,7 @@
 # TokenPanel
 
+<img src="docs/screenshot.png" width="340" alt="TokenPanel usage panel">
+
 macOS menu bar app for plan usage on Grok, Cursor, Claude Code, and Codex / ChatGPT.
 
 It reuses each product's local session. No extra API keys.
