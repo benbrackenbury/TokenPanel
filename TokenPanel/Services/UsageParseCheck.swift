@@ -14,6 +14,33 @@ enum UsageParseCheck {
             let x = try CodexUsageClient.parse(codex)
             precondition(x.usedPercent == 6 && x.features.first?.id == "month" && x.identity.email == "a@b.c")
 
+            precondition(FeatureUsage.label(for: "1") == "API")
+            precondition(FeatureUsage.label(for: "2") == "Grok Build")
+            precondition(FeatureUsage.label(for: "4") == "Chat")
+            precondition(FeatureUsage.label(for: "5") == "Imagine")
+            precondition(FeatureUsage.label(for: "9") == "Grok Bot")
+            precondition(FeatureUsage.label(for: "10") == "Cursor")
+            precondition(FeatureUsage.label(for: "11") == "Bugbot")
+            precondition(FeatureUsage(id: "9", percent: 12).name == "Grok Bot")
+
+            // Weekly Super Limit sample: Grok Bot 12%, Chat 2%, Imagine 2%, Cursor 13%.
+            // Voice at 0% is present on the wire and must be omitted from the breakdown.
+            let grokFrame = Data([
+                0x00, 0x00, 0x00, 0x00, 0x34, 0x0a, 0x32, 0x0d, 0x00, 0x00, 0xe8, 0x41,
+                0x3a, 0x07, 0x08, 0x09, 0x15, 0x00, 0x00, 0x40, 0x41, 0x3a, 0x07, 0x08, 0x04,
+                0x15, 0x00, 0x00, 0x00, 0x40, 0x3a, 0x07, 0x08, 0x05, 0x15, 0x00, 0x00, 0x00, 0x40,
+                0x3a, 0x07, 0x08, 0x0a, 0x15, 0x00, 0x00, 0x50, 0x41, 0x3a, 0x07, 0x08, 0x06,
+                0x15, 0x00, 0x00, 0x00, 0x00
+            ])
+            let g = try GrokCreditsClient.parseResponse(grokFrame)
+            precondition(g.usedPercent == 29)
+            precondition(Set(g.features.map(\.id)) == ["10", "9", "4", "5"])
+            precondition(!g.features.contains(where: { $0.id == "6" }))
+            precondition(g.features.first?.name == "Cursor")
+            precondition(g.features.contains(where: { $0.name == "Grok Bot" && $0.percent == 12 }))
+            precondition(g.features.contains(where: { $0.name == "Chat" && $0.percent == 2 }))
+            precondition(g.features.contains(where: { $0.name == "Imagine" && $0.percent == 2 }))
+
             let snapshot = UsageSnapshot(
                 provider: .cursor,
                 usedPercent: c.usedPercent,
