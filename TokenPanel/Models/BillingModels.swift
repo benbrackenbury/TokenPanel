@@ -96,14 +96,22 @@ struct FeatureUsage: Identifiable, Equatable, Codable, Sendable {
         self.name = name ?? Self.label(for: id)
     }
 
+    /// Grok numeric IDs are `billing_product.Product` from grok.com
+    /// (`prod/billing-pub/proto/product.proto`). Unknown IDs keep the raw id.
     static func label(for id: String) -> String {
         switch id {
-        case "1": return "Chat"
-        case "2": return "Voice"
-        case "3": return "Imagine"
-        case "4": return "Video"
-        case "5": return "DeepSearch"
-        case "6": return "Build"
+        case "0": return "3rd party"
+        case "1": return "API"
+        case "2": return "Grok Build"
+        case "3": return "Grok Plugins"
+        case "4": return "Chat"
+        case "5": return "Imagine"
+        case "6": return "Voice"
+        case "7": return "App Builder"
+        case "8": return "Automations"
+        case "9": return "Grok Bot"
+        case "10": return "Cursor"
+        case "11": return "Bugbot"
         case "5h", "primary": return "Session (5h)"
         case "week", "secondary": return "Week"
         case "month": return "Month"

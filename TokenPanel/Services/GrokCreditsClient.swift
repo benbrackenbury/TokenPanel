@@ -119,9 +119,11 @@ final class GrokCreditsClient: UsageFetching, Sendable {
                 }
                 .min()
 
-        // feature buckets: repeated message at [1,7] with id varint field 1 and percent float field 2
+        // feature buckets: repeated message at [1,7] with id varint field 1 and percent float field 2.
+        // Product enum: API=1, GROK_BUILD=2, GROK_PLUGINS=3, GROK_CHAT=4, GROK_IMAGINE=5,
+        // GROK_VOICE=6, GROK_APP_BUILDER=7, GROK_TASKS=8, GROK_BOT=9, CURSOR=10, BUGBOT=11.
         var features: [FeatureUsage] = []
-        for group in scan.featureGroups {
+        for group in scan.featureGroups where group.percent > 0 {
             features.append(FeatureUsage(id: String(group.id), percent: group.percent))
         }
         features.sort { $0.percent > $1.percent }
