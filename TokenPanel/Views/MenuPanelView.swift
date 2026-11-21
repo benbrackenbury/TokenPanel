@@ -6,6 +6,7 @@ import AppKit
 struct MenuPanelView: View {
     @Bindable var viewModel: UsageViewModel
     @Bindable var updater: AppUpdater
+    @Environment(\.colorScheme) private var colorScheme
     #if os(macOS)
     @Environment(\.openWindow) private var openWindow
     #endif
@@ -146,7 +147,7 @@ struct MenuPanelView: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(viewModel.formatPercent(used))
                     .font(.system(size: 36, weight: .semibold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(usageColor(used))
+                    .foregroundStyle(usageLabelColor(used))
                 Text("used")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -331,6 +332,13 @@ struct MenuPanelView: View {
         if percent >= 80 { return .orange }
         if percent >= 50 { return .yellow }
         return .green
+    }
+
+    private func usageLabelColor(_ percent: Double) -> Color {
+        if colorScheme == .light, percent < 50 {
+            return Color(red: 0.15, green: 0.55, blue: 0.25)
+        }
+        return usageColor(percent)
     }
 
     private func icon(for featureID: String) -> String {
