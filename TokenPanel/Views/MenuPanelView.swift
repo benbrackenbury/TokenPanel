@@ -270,6 +270,8 @@ struct MenuPanelView: View {
             return "Uses Claude Code’s local login, then loads plan usage from Anthropic. Run `claude` once if this is empty."
         case .codex:
             return "Uses `\(CodexAuthStore.authFileURL().path)` from `codex login`, then loads usage from ChatGPT."
+        case .antigravity:
+            return "Uses the Antigravity CLI login from `agy`, then loads quota from Google Cloud Code."
         }
     }
 
@@ -355,8 +357,8 @@ struct MenuPanelView: View {
         case "9": return "desktopcomputer"
         case "10": return "macwindow"
         case "11": return "ladybug"
-        case "5h", "primary": return "clock"
-        case "week", "secondary", "month": return "calendar"
+        case "5h", "primary", "gemini-5h", "3p-5h": return "clock"
+        case "week", "secondary", "month", "gemini-weekly", "3p-weekly": return "calendar"
         case "week-opus", "week-sonnet": return "calendar.badge.clock"
         case "auto": return "sparkle"
         case "api": return "chevron.left.forwardslash.chevron.right"

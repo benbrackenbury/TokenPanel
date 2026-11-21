@@ -8,6 +8,7 @@ enum ProviderID: String, CaseIterable, Identifiable, Codable, Hashable, Sendable
     case cursor
     case claude
     case codex
+    case antigravity
 
     var id: String { rawValue }
 
@@ -17,6 +18,7 @@ enum ProviderID: String, CaseIterable, Identifiable, Codable, Hashable, Sendable
         case .cursor: return "Cursor"
         case .claude: return "Claude"
         case .codex: return "Codex"
+        case .antigravity: return "Antigravity"
         }
     }
 
@@ -26,6 +28,7 @@ enum ProviderID: String, CaseIterable, Identifiable, Codable, Hashable, Sendable
         case .cursor: return "LogoCursor"
         case .claude: return "LogoClaude"
         case .codex: return "LogoCodex"
+        case .antigravity: return "LogoAntigravity"
         }
     }
 
@@ -35,6 +38,7 @@ enum ProviderID: String, CaseIterable, Identifiable, Codable, Hashable, Sendable
         case .cursor: return "Sign in inside Cursor"
         case .claude: return "claude"
         case .codex: return "codex login"
+        case .antigravity: return "agy"
         }
     }
 
@@ -44,6 +48,7 @@ enum ProviderID: String, CaseIterable, Identifiable, Codable, Hashable, Sendable
         case .cursor: return URL(string: "https://cursor.com/dashboard?tab=usage")!
         case .claude: return URL(string: "https://claude.ai/settings/usage")!
         case .codex: return URL(string: "https://chatgpt.com/codex/settings/usage")!
+        case .antigravity: return URL(string: "https://antigravity.google")!
         }
     }
 
@@ -53,6 +58,7 @@ enum ProviderID: String, CaseIterable, Identifiable, Codable, Hashable, Sendable
         case .cursor: return URL(string: "https://cursor.com/dashboard?tab=billing")!
         case .claude: return URL(string: "https://claude.ai/settings/billing")!
         case .codex: return URL(string: "https://chatgpt.com/codex/settings/usage")!
+        case .antigravity: return URL(string: "https://antigravity.google/g1-upgrade")!
         }
     }
 }
@@ -117,6 +123,10 @@ struct FeatureUsage: Identifiable, Equatable, Codable, Sendable {
         case "month": return "Month"
         case "week-opus": return "Week (Opus)"
         case "week-sonnet": return "Week (Sonnet)"
+        case "gemini-5h": return "Gemini (5h)"
+        case "gemini-weekly": return "Gemini weekly"
+        case "3p-5h": return "Claude/GPT (5h)"
+        case "3p-weekly": return "Claude/GPT weekly"
         case "auto": return "Auto"
         case "api": return "API"
         default: return id

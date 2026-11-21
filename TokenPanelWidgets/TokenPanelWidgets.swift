@@ -18,12 +18,16 @@ struct UsageWidgetIntent: WidgetConfigurationIntent {
     @Parameter(title: "Codex", default: true)
     var showCodex: Bool
 
+    @Parameter(title: "Antigravity", default: true)
+    var showAntigravity: Bool
+
     var enabledProviders: [ProviderID] {
         var ids: [ProviderID] = []
         if showGrok { ids.append(.grok) }
         if showCursor { ids.append(.cursor) }
         if showClaude { ids.append(.claude) }
         if showCodex { ids.append(.codex) }
+        if showAntigravity { ids.append(.antigravity) }
         return ids
     }
 }
@@ -65,7 +69,7 @@ struct UsageTimelineProvider: AppIntentTimelineProvider {
     func sampleEntry(providers: [ProviderID]) -> UsageEntry {
         let ids = providers.isEmpty ? ProviderID.allCases.map { $0 } : providers
         var snapshots: [ProviderID: UsageSnapshot] = [:]
-        let percents: [ProviderID: Double] = [.grok: 42, .cursor: 18, .claude: 27, .codex: 9]
+        let percents: [ProviderID: Double] = [.grok: 42, .cursor: 18, .claude: 27, .codex: 9, .antigravity: 14]
         for id in ids {
             snapshots[id] = UsageSnapshot(
                 provider: id,
@@ -291,7 +295,7 @@ struct UsageWidget: Widget {
             UsageWidgetView(entry: entry)
         }
         .configurationDisplayName("Usage")
-        .description("Plan usage for Grok, Cursor, Claude, and Codex. Toggle providers per widget.")
+        .description("Plan usage for Grok, Cursor, Claude, Codex, and Antigravity. Toggle providers per widget.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge])
     }
 }

@@ -4,7 +4,7 @@
 
 <img src="docs/panel.jpg" width="376" alt="TokenPanel usage panel">
 
-macOS menu bar app for plan usage on Grok, Cursor, Claude Code, and Codex / ChatGPT.
+macOS menu bar app for plan usage on Grok, Cursor, Claude Code, Codex / ChatGPT, and Antigravity.
 
 It reuses each product's local session. No extra API keys.
 
@@ -35,6 +35,7 @@ A version tag updates this tap after the GitHub Release is published. Then `brew
 grok login
 codex login
 claude
+agy
 ```
 
 Cursor: sign in inside the Cursor app.
@@ -58,7 +59,7 @@ If numbers stop loading, sign in again in that product (sessions expire), then r
 
 ## How it works
 
-1. Sign in once in that product (`grok login`, Cursor, `claude`, or `codex login`).
+1. Sign in once in that product (`grok login`, Cursor, `claude`, `codex login`, or `agy`).
 2. TokenPanel reads that session and asks the same usage endpoint the product uses.
 3. The menu bar shows how much you've used, when it resets, and a per-product breakdown.
 

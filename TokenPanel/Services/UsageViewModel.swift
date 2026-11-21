@@ -30,7 +30,8 @@ final class UsageViewModel {
         GrokCreditsClient(),
         CursorUsageClient(),
         ClaudeUsageClient(),
-        CodexUsageClient()
+        CodexUsageClient(),
+        AntigravityUsageClient()
     ]
     private var refreshTask: Task<Void, Never>?
     private var refreshGeneration = 0
@@ -236,6 +237,10 @@ final class UsageViewModel {
         case .cursor: return CursorAuthStore.stateDBURL().path
         case .claude: return ClaudeAuthStore.credentialsFileURL().path
         case .codex: return CodexAuthStore.authFileURL().path
+        case .antigravity:
+            let file = AntigravityAuthStore.credentialsFileURL()
+            if FileManager.default.fileExists(atPath: file.path) { return file.path }
+            return "macOS Keychain (gemini / antigravity)"
         }
     }
 
