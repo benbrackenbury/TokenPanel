@@ -26,6 +26,8 @@ enum UsageParseCheck {
             precondition(keyring.accessToken == "agy-token")
             let cli = try AntigravityUsageClient.parse(Data(#"{"command":{"name":"usage","data":{"groups":[{"buckets":[{"id":"gemini-weekly","remaining_fraction":1}]}]}}}"#.utf8))
             precondition(cli.features.first?.id == "gemini-weekly" && cli.usedPercent == 0)
+            let split = try AntigravityUsageClient.parse(Data(#"{"groups":[{"buckets":[{"bucketId":"gemini-5h","remainingFraction":0.9},{"bucketId":"3p-5h","remainingFraction":0}]}]}"#.utf8))
+            precondition(abs((split.usedPercent ?? 0) - 100) < 0.01)
 
             precondition(FeatureUsage.label(for: "1") == "API")
             precondition(FeatureUsage.label(for: "2") == "Grok Build")
