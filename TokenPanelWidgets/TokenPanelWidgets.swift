@@ -200,7 +200,7 @@ struct UsageWidgetView: View {
 
     @ViewBuilder
     private var multiple: some View {
-        let items = Array(visible.prefix(compact ? 4 : 8))
+        let items = Array(visible.prefix(compact ? 6 : 8))
         VStack(alignment: .leading, spacing: compact ? 8 : 10) {
             Text("TokenPanel")
                 .font(.caption.weight(.semibold))

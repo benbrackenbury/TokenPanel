@@ -253,16 +253,33 @@ final class AntigravityUsageClient: UsageFetching, Sendable {
                     continuation.resume(throwing: TokenPanelError.transport(error))
                     return
                 }
+                let outBox = DataBox()
+                let errBox = DataBox()
+                let group = DispatchGroup()
+                group.enter()
+                DispatchQueue.global(qos: .userInitiated).async {
+                    outBox.data = stdout.fileHandleForReading.readDataToEndOfFile()
+                    group.leave()
+                }
+                group.enter()
+                DispatchQueue.global(qos: .userInitiated).async {
+                    errBox.data = stderr.fileHandleForReading.readDataToEndOfFile()
+                    group.leave()
+                }
                 process.waitUntilExit()
-                let data = stdout.fileHandleForReading.readDataToEndOfFile()
+                group.wait()
                 if process.terminationStatus != 0 {
-                    let err = String(data: stderr.fileHandleForReading.readDataToEndOfFile().prefix(200), encoding: .utf8) ?? ""
+                    let err = String(data: errBox.data.prefix(200), encoding: .utf8) ?? ""
                     continuation.resume(throwing: TokenPanelError.http(status: Int(process.terminationStatus), body: err))
                     return
                 }
-                continuation.resume(returning: data)
+                continuation.resume(returning: outBox.data)
             }
         }
+    }
+
+    private final class DataBox: @unchecked Sendable {
+        var data = Data()
     }
 
     struct Parsed {
@@ -304,7 +321,8 @@ final class AntigravityUsageClient: UsageFetching, Sendable {
 
         guard !features.isEmpty else { throw TokenPanelError.parseFailed }
 
-        let headline = features.first(where: { $0.id.hasSuffix("-5h") || $0.id == "5h" })
+        let fiveHour = features.filter { $0.id.hasSuffix("-5h") || $0.id == "5h" }
+        let headline = fiveHour.max(by: { $0.percent < $1.percent })
             ?? features.max(by: { $0.percent < $1.percent })
         let used = headline?.percent
         let resets = headline.flatMap { resetsByID[$0.id] } ?? resetsByID.values.min()
