@@ -13,14 +13,37 @@ struct SettingsView: View {
     @State private var grokAuthPath: String = ""
 
     var body: some View {
-        Form {
+            Form {
+                Section("Providers") {
+                    ForEach(ProviderID.allCases) { provider in
+                        Toggle(isOn: Binding(
+                            get: { viewModel.isEnabled(provider) },
+                            set: { viewModel.setEnabled(provider, $0) }
+                        )) {
+                            Label {
+                                Text(provider.displayName)
+                            } icon: {
+                                ProviderLogo(provider: provider, size: 14)
+                            }
+                        }
+                        #if os(macOS)
+                        .toggleStyle(.checkbox)
+                        #endif
+                        .disabled(viewModel.enabledProviders.count == 1 && viewModel.isEnabled(provider))
+                    }
+                    Text("Unchecked tools are hidden from the menu bar and skipped on refresh.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 Section("Menu bar") {
                     Picker("Show usage for", selection: Binding(
                         get: { viewModel.menuBarFocus },
                         set: { viewModel.setMenuBarFocus($0) }
                     )) {
                         Text("All").tag(Optional<ProviderID>.none)
-                        ForEach(ProviderID.allCases) { provider in
+                        ForEach(viewModel.enabledProviders) { provider in
                             Label {
                                 Text(provider.displayName)
                             } icon: {
@@ -60,7 +83,7 @@ struct SettingsView: View {
                     }
                 }
 
-                ForEach(ProviderID.allCases) { provider in
+                ForEach(viewModel.enabledProviders) { provider in
                     Section {
                         LabeledContent("Status", value: status(for: provider))
                         LabeledContent("Session") {

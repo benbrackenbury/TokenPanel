@@ -6,6 +6,7 @@ enum Preferences {
     private static let showMenuBarPercentageKey = "grok.showMenuBarPercentage"
     private static let selectedProviderKey = "tokenpanel.selectedProvider"
     private static let showAllMenuBarProvidersKey = "tokenpanel.showAllMenuBarProviders"
+    private static let enabledProvidersKey = "tokenpanel.enabledProviders"
 
     static var refreshMinutes: Int {
         get {
@@ -42,10 +43,36 @@ enum Preferences {
         set { UserDefaults.standard.set(newValue.rawValue, forKey: selectedProviderKey) }
     }
 
-    static var isConfigured: Bool {
-        GrokAuthStore.isConfigured
-            || CursorAuthStore.isConfigured
-            || ClaudeAuthStore.isConfigured
-            || CodexAuthStore.isConfigured
+    /// Missing key follows local sessions. Empty stored list stays empty.
+    static var enabledProviders: Set<ProviderID> {
+        get {
+            let stored = UserDefaults.standard.array(forKey: enabledProvidersKey) as? [String]
+            return resolveEnabledProviders(stored: stored, signedIn: signedInProviders)
+        }
+        set {
+            UserDefaults.standard.set(newValue.map(\.rawValue), forKey: enabledProvidersKey)
+        }
+    }
+
+    static func resolveEnabledProviders(stored: [String]?, signedIn: Set<ProviderID>) -> Set<ProviderID> {
+        guard let stored else {
+            return signedIn.isEmpty ? Set(ProviderID.allCases) : signedIn
+        }
+        return Set(stored.compactMap(ProviderID.init(rawValue:)))
+    }
+
+    static var enabledOrdered: [ProviderID] {
+        ProviderID.allCases.filter { enabledProviders.contains($0) }
+    }
+
+    static var isConfigured: Bool { !signedInProviders.isEmpty }
+
+    private static var signedInProviders: Set<ProviderID> {
+        var ids: Set<ProviderID> = []
+        if GrokAuthStore.isConfigured { ids.insert(.grok) }
+        if CursorAuthStore.isConfigured { ids.insert(.cursor) }
+        if ClaudeAuthStore.isConfigured { ids.insert(.claude) }
+        if CodexAuthStore.isConfigured { ids.insert(.codex) }
+        return ids
     }
 }

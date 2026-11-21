@@ -13,7 +13,7 @@ struct MenuPanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
-            if viewModel.configured.count > 1 {
+            if viewModel.enabledProviders.count > 1 {
                 providerSwitcher
                 Divider()
             } else {
@@ -86,7 +86,7 @@ struct MenuPanelView: View {
             get: { viewModel.selectedProvider },
             set: { viewModel.select($0) }
         )) {
-            ForEach(viewModel.configured) { provider in
+            ForEach(viewModel.enabledProviders) { provider in
                 Text(provider.displayName).tag(provider)
             }
         }
