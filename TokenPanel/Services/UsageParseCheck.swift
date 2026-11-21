@@ -56,6 +56,11 @@ enum UsageParseCheck {
                 from: try JSONEncoder().encode(snapshot)
             )
             precondition(roundtrip.usedPercent == 12.5 && roundtrip.provider == .cursor)
+
+            precondition(Preferences.resolveEnabledProviders(stored: nil, signedIn: [.grok, .cursor]) == Set([.grok, .cursor]))
+            precondition(Preferences.resolveEnabledProviders(stored: nil, signedIn: []) == Set(ProviderID.allCases))
+            precondition(Preferences.resolveEnabledProviders(stored: ["codex"], signedIn: [.grok]) == Set([.codex]))
+            precondition(Preferences.resolveEnabledProviders(stored: [], signedIn: [.grok]).isEmpty)
         } catch {
             assertionFailure("usage parse check failed: \(error)")
         }

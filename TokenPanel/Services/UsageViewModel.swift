@@ -10,6 +10,7 @@ final class UsageViewModel {
     var snapshots: [ProviderID: UsageSnapshot] = [:]
     var errors: [ProviderID: String] = [:]
     var configured: [ProviderID] = []
+    var enabledProviders: [ProviderID] = Preferences.enabledOrdered
     var selectedProvider: ProviderID = Preferences.selectedProvider
     var isLoading = false
     var lastError: String?
@@ -17,6 +18,13 @@ final class UsageViewModel {
     var showingSettings = false
     var showMenuBarPercentage: Bool = Preferences.showMenuBarPercentage
     var showAllMenuBarProviders: Bool = Preferences.showAllMenuBarProviders
+
+    init() {
+        if !enabledProviders.contains(selectedProvider), let first = enabledProviders.first {
+            selectedProvider = first
+            Preferences.selectedProvider = first
+        }
+    }
 
     private let fetchers: [any UsageFetching] = [
         GrokCreditsClient(),
@@ -56,11 +64,22 @@ final class UsageViewModel {
         isLoading = true
         defer { isLoading = false }
 
+        let enabled = Set(enabledProviders)
         configured = ProviderID.allCases.filter { id in
-            fetchers.contains { $0.provider == id && $0.isConfigured }
+            enabled.contains(id) && fetchers.contains { $0.provider == id && $0.isConfigured }
         }
 
-        for fetcher in fetchers where fetcher.isConfigured {
+        for id in ProviderID.allCases where !enabled.contains(id) {
+            snapshots.removeValue(forKey: id)
+            errors.removeValue(forKey: id)
+        }
+
+        for fetcher in fetchers where enabled.contains(fetcher.provider) {
+            guard fetcher.isConfigured else {
+                snapshots.removeValue(forKey: fetcher.provider)
+                errors[fetcher.provider] = nil
+                continue
+            }
             do {
                 snapshots[fetcher.provider] = try await fetcher.fetch()
                 errors[fetcher.provider] = nil
@@ -87,15 +106,16 @@ final class UsageViewModel {
     var menuBarProviders: [ProviderID] {
         if showAllMenuBarProviders {
             if !configured.isEmpty { return configured }
-            let known = ProviderID.allCases.filter { snapshots[$0] != nil }
+            let known = enabledProviders.filter { snapshots[$0] != nil }
             if !known.isEmpty { return known }
+            if !enabledProviders.isEmpty { return enabledProviders }
         }
         return [selectedProvider]
     }
 
     var menuBarSignature: String {
         menuBarProviders.map { "\($0.rawValue):\(menuBarTitle(for: $0))" }.joined(separator: "|")
-            + "|\(showMenuBarPercentage)|\(showAllMenuBarProviders)"
+            + "|\(showMenuBarPercentage)|\(showAllMenuBarProviders)|\(enabledProviders.map(\.rawValue).joined(separator: ","))"
     }
 
     var menuBarTitle: String {
@@ -133,6 +153,27 @@ final class UsageViewModel {
         } else {
             setShowAllMenuBarProviders(true)
         }
+    }
+
+    func isEnabled(_ provider: ProviderID) -> Bool {
+        enabledProviders.contains(provider)
+    }
+
+    func setEnabled(_ provider: ProviderID, _ enabled: Bool) {
+        var next = Set(enabledProviders)
+        if enabled {
+            next.insert(provider)
+        } else if next.count > 1 {
+            next.remove(provider)
+        } else {
+            return
+        }
+        Preferences.enabledProviders = next
+        enabledProviders = ProviderID.allCases.filter { next.contains($0) }
+        if !next.contains(selectedProvider), let first = enabledProviders.first {
+            select(first)
+        }
+        Task { await refresh() }
     }
 
     func formatPercent(_ value: Double) -> String {
