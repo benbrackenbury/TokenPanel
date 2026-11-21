@@ -5,6 +5,7 @@ enum UsageParseCheck {
         let cursor = Data(#"{"billingCycleEnd":"2026-11-01T00:00:00Z","planUsage":{"totalPercentUsed":12.5,"autoPercentUsed":4,"apiPercentUsed":8,"membershipType":"pro"}}"#.utf8)
         let claude = Data(#"{"five_hour":{"utilization":22.0,"resets_at":"2026-10-04T18:00:00Z"},"seven_day":{"utilization":41.0,"resets_at":"2026-10-10T12:00:00Z"}}"#.utf8)
         let codex = Data(#"{"plan_type":"plus","email":"a@b.c","rate_limit":{"primary_window":{"used_percent":6,"limit_window_seconds":2592000,"reset_at":1792918655},"secondary_window":null}}"#.utf8)
+        let antigravity = Data(#"{"groups":[{"displayName":"Gemini Models","buckets":[{"bucketId":"gemini-weekly","remainingFraction":1,"resetTime":"2026-11-28T11:48:09Z"}]},{"displayName":"Claude and GPT models","buckets":[{"bucketId":"3p-weekly","remainingFraction":0.966869,"resetTime":"2026-11-28T11:44:46Z"},{"bucketId":"3p-5h","remainingFraction":0.5,"resetTime":"2026-11-21T16:44:46Z"}]}]}"#.utf8)
 
         do {
             let c = try CursorUsageClient.parse(cursor)
@@ -13,6 +14,18 @@ enum UsageParseCheck {
             precondition(a.usedPercent == 22 && a.features.contains(where: { $0.id == "week" }))
             let x = try CodexUsageClient.parse(codex)
             precondition(x.usedPercent == 6 && x.features.first?.id == "month" && x.identity.email == "a@b.c")
+            let ag = try AntigravityUsageClient.parse(antigravity)
+            precondition(abs((ag.usedPercent ?? 0) - 50) < 0.01)
+            precondition(ag.features.contains(where: { $0.id == "3p-weekly" && abs($0.percent - 3.3131) < 0.01 }))
+            precondition(ag.features.contains(where: { $0.id == "gemini-weekly" && $0.percent == 0 }))
+            precondition(FeatureUsage.label(for: "gemini-weekly") == "Gemini weekly")
+            precondition(FeatureUsage.label(for: "3p-5h") == "Claude/GPT (5h)")
+            let creds = try AntigravityAuthStore.parse(Data(#"{"id_token_email":"a@b.c","token":{"access_token":"ya29.abc","expiry":"2026-11-21T12:43:15.390132Z"}}"#.utf8))
+            precondition(creds.accessToken == "ya29.abc" && creds.identity.email == "a@b.c")
+            let keyring = try AntigravityAuthStore.parse(Data("go-keyring-base64:eyJhY2Nlc3NfdG9rZW4iOiJhZ3ktdG9rZW4ifQ==".utf8))
+            precondition(keyring.accessToken == "agy-token")
+            let cli = try AntigravityUsageClient.parse(Data(#"{"command":{"name":"usage","data":{"groups":[{"buckets":[{"id":"gemini-weekly","remaining_fraction":1}]}]}}}"#.utf8))
+            precondition(cli.features.first?.id == "gemini-weekly" && cli.usedPercent == 0)
 
             precondition(FeatureUsage.label(for: "1") == "API")
             precondition(FeatureUsage.label(for: "2") == "Grok Build")

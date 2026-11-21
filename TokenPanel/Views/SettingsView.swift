@@ -64,7 +64,7 @@ struct SettingsView: View {
                 }
 
                 Section("Widgets") {
-                    Text("Desktop widgets are in the macOS widget gallery under TokenPanel. Each widget has a toggle for Grok, Cursor, Claude, and Codex, so one tile can show a single provider or several. Keep TokenPanel running so the numbers stay current.")
+                    Text("Desktop widgets are in the macOS widget gallery under TokenPanel. Each widget has a toggle for Grok, Cursor, Claude, Codex, and Antigravity, so one tile can show a single provider or several. Keep TokenPanel running so the numbers stay current.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -194,6 +194,8 @@ struct SettingsView: View {
             return "Log in with Claude Code (`claude`). Subscription plan windows only, not API-key billing."
         case .codex:
             return "Sign in with `codex login`. ChatGPT Codex rate-limit windows from the local session."
+        case .antigravity:
+            return "Sign in with `agy`. Plan quota from the Antigravity CLI session, not Gemini API prepaid dollars."
         }
     }
 

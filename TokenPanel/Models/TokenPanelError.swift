@@ -29,6 +29,8 @@ enum TokenPanelError: LocalizedError {
                 return "No Claude Code session. Run `claude` once to log in, then refresh."
             case .codex:
                 return "No Codex session at \(CodexAuthStore.authFileURL().path). Run `codex login`, then refresh."
+            case .antigravity:
+                return "No Antigravity session. Run `agy` once to log in, then refresh."
             }
         case .expiredCredentials:
             return "Login expired. Sign in again in that product, then refresh."

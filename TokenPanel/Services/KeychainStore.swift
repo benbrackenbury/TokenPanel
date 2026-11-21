@@ -73,6 +73,7 @@ enum Preferences {
         if CursorAuthStore.isConfigured { ids.insert(.cursor) }
         if ClaudeAuthStore.isConfigured { ids.insert(.claude) }
         if CodexAuthStore.isConfigured { ids.insert(.codex) }
+        if AntigravityAuthStore.isConfigured { ids.insert(.antigravity) }
         return ids
     }
 }
