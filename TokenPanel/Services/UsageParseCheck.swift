@@ -61,6 +61,21 @@ enum UsageParseCheck {
             precondition(Preferences.resolveEnabledProviders(stored: nil, signedIn: []) == Set(ProviderID.allCases))
             precondition(Preferences.resolveEnabledProviders(stored: ["codex"], signedIn: [.grok]) == Set([.codex]))
             precondition(Preferences.resolveEnabledProviders(stored: [], signedIn: [.grok]).isEmpty)
+            // Unset pref follows a session that appears later; an explicit list does not.
+            precondition(Preferences.resolveEnabledProviders(stored: nil, signedIn: [.grok]) == Set([.grok]))
+            precondition(Preferences.resolveEnabledProviders(stored: nil, signedIn: [.grok, .codex]) == Set([.grok, .codex]))
+            precondition(Preferences.resolveEnabledProviders(stored: ["grok"], signedIn: [.grok, .codex]) == Set([.grok]))
+
+            let enabledMidRefresh: Set<ProviderID> = [.grok]
+            precondition(ProviderRefresh.shouldApplyResult(
+                generation: 1, currentGeneration: 1, provider: .grok, enabled: [.grok, .cursor]
+            ))
+            precondition(!ProviderRefresh.shouldApplyResult(
+                generation: 1, currentGeneration: 2, provider: .cursor, enabled: [.grok, .cursor]
+            ))
+            precondition(!ProviderRefresh.shouldApplyResult(
+                generation: 2, currentGeneration: 2, provider: .cursor, enabled: enabledMidRefresh
+            ))
         } catch {
             assertionFailure("usage parse check failed: \(error)")
         }
