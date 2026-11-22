@@ -165,6 +165,24 @@ struct MenuPanelView: View {
             ProgressView(value: min(max(used, 0), 100), total: 100)
                 .tint(usageColor(used))
 
+            if let pace = viewModel.snapshot.pace() {
+                HStack {
+                    Text(pace.noun.capitalized)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(viewModel.formatPercent(pace.elapsedPercent))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                ProgressView(value: min(max(pace.elapsedPercent, 0), 100), total: 100)
+                    .tint(.secondary)
+                    .controlSize(.small)
+                Text(pace.caption())
+                    .font(.caption)
+                    .foregroundStyle(pace.isHot ? usageColor(pace.usedPercent) : .secondary)
+            }
+
             if let resets = viewModel.snapshot.resetsAt {
                 Text("Resets \(resets.formatted(.dateTime.month(.abbreviated).day().hour().minute()))")
                     .font(.caption)

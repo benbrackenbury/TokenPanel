@@ -71,11 +71,12 @@ struct UsageTimelineProvider: AppIntentTimelineProvider {
         var snapshots: [ProviderID: UsageSnapshot] = [:]
         let percents: [ProviderID: Double] = [.grok: 42, .cursor: 18, .claude: 27, .codex: 9, .antigravity: 14]
         for id in ids {
+            let grok = id == .grok
             snapshots[id] = UsageSnapshot(
                 provider: id,
                 usedPercent: percents[id] ?? 20,
-                periodStart: nil,
-                resetsAt: Calendar.current.date(byAdding: .day, value: 12, to: .now),
+                periodStart: grok ? Calendar.current.date(byAdding: .day, value: -1, to: .now) : nil,
+                resetsAt: Calendar.current.date(byAdding: .day, value: grok ? 6 : 12, to: .now),
                 features: [
                     FeatureUsage(id: "sample-a", percent: percents[id] ?? 20, name: "Plan"),
                     FeatureUsage(id: "sample-b", percent: 8, name: "Extra")
@@ -171,9 +172,12 @@ struct UsageWidgetView: View {
             if let used = snap?.usedPercent {
                 UsageBar(percent: used, color: usageColor(used))
             }
+            if !compact, let pace = snap?.pace() {
+                UsageBar(percent: pace.elapsedPercent, color: Color.black.opacity(0.22))
+            }
             if !compact {
                 HStack {
-                    Text(snap.map { "\($0.formatPercent($0.remainingPercent ?? 0)) left" } ?? "Open TokenPanel")
+                    Text(snap?.pace()?.caption() ?? snap.map { "\($0.formatPercent($0.remainingPercent ?? 0)) left" } ?? "Open TokenPanel")
                     Spacer()
                     if let resets = snap?.resetsAt {
                         Text(resets.formatted(.dateTime.month(.abbreviated).day()))
@@ -181,6 +185,7 @@ struct UsageWidgetView: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.primary.opacity(0.55))
+                .lineLimit(2)
             }
             if roomy, let features = snap?.features, !features.isEmpty {
                 ForEach(features.prefix(family == .systemExtraLarge ? 8 : 5)) { feature in

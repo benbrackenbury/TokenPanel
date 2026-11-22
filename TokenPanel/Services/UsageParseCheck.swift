@@ -72,6 +72,48 @@ enum UsageParseCheck {
             )
             precondition(roundtrip.usedPercent == 12.5 && roundtrip.provider == .cursor)
 
+            let weekStart = Date(timeIntervalSince1970: 1_700_000_000)
+            let weekEnd = weekStart.addingTimeInterval(7 * 86400)
+            let day1 = weekStart.addingTimeInterval(86400)
+            let hot = UsageSnapshot(
+                provider: .grok,
+                usedPercent: 30,
+                periodStart: weekStart,
+                resetsAt: weekEnd,
+                features: [FeatureUsage(id: "4", percent: 30, name: "Chat")],
+                identity: nil,
+                source: "check",
+                fetchedAt: day1
+            )
+            let hotPace = hot.pace(now: day1)
+            precondition(hotPace != nil)
+            precondition(abs((hotPace?.elapsedPercent ?? 0) - (100 / 7)) < 0.2)
+            precondition(hotPace?.isHot == true)
+            precondition((hotPace?.emptyAt ?? weekEnd) < weekEnd)
+            precondition(hotPace?.noun == "week")
+            let ok = UsageSnapshot(
+                provider: .grok,
+                usedPercent: 10,
+                periodStart: weekStart,
+                resetsAt: weekEnd,
+                features: [],
+                identity: nil,
+                source: "check",
+                fetchedAt: day1
+            )
+            precondition(ok.pace(now: day1)?.isHot == false)
+            let claudeWeek = UsageSnapshot(
+                provider: .claude,
+                usedPercent: 22,
+                periodStart: nil,
+                resetsAt: day1.addingTimeInterval(4 * 3600),
+                features: [FeatureUsage(id: "5h", percent: 22)],
+                identity: nil,
+                source: "check",
+                fetchedAt: day1
+            )
+            precondition(claudeWeek.pace(now: day1)?.noun == "session")
+
             precondition(Preferences.resolveEnabledProviders(stored: nil, signedIn: [.grok, .cursor]) == Set([.grok, .cursor]))
             precondition(Preferences.resolveEnabledProviders(stored: nil, signedIn: []) == Set(ProviderID.allCases))
             precondition(Preferences.resolveEnabledProviders(stored: ["codex"], signedIn: [.grok]) == Set([.codex]))

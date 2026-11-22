@@ -163,6 +163,17 @@ struct UsageSnapshot: Equatable, Codable, Sendable {
     }
 
     var cycleLabel: String {
+        if let start = periodStart, let end = resetsAt {
+            let total = end.timeIntervalSince(start)
+            if total > 60 {
+                switch Self.periodNoun(total: total) {
+                case "session": return "Session"
+                case "week": return "Weekly"
+                case "month": return "Monthly"
+                default: break
+                }
+            }
+        }
         guard let resetsAt else { return "Credits" }
         let days = Calendar.current.dateComponents([.day], from: Date(), to: resetsAt).day ?? 0
         if days >= 25 && days <= 35 { return "Monthly" }
@@ -181,6 +192,95 @@ struct UsageSnapshot: Equatable, Codable, Sendable {
     var usedLabel: String {
         guard let usedPercent else { return "—" }
         return formatPercent(usedPercent)
+    }
+
+    /// Quota vs how far the current window has run. Linear rate from period start.
+    func pace(now: Date = Date()) -> UsagePace? {
+        guard let used = usedPercent, let end = resetsAt else { return nil }
+        let start: Date
+        if let periodStart, end.timeIntervalSince(periodStart) > 60 {
+            start = periodStart
+        } else if let inferred = inferredPeriodStart(end: end) {
+            start = inferred
+        } else {
+            return nil
+        }
+        let total = end.timeIntervalSince(start)
+        guard total > 60 else { return nil }
+        let elapsed = min(max(now.timeIntervalSince(start), 0), total)
+        let elapsedPercent = elapsed / total * 100
+        let emptyAt: Date? = {
+            guard used > 0.05, elapsed > 0 else { return nil }
+            return start.addingTimeInterval(elapsed / (used / 100))
+        }()
+        return UsagePace(
+            usedPercent: used,
+            elapsedPercent: elapsedPercent,
+            start: start,
+            end: end,
+            emptyAt: emptyAt,
+            noun: Self.periodNoun(total: total)
+        )
+    }
+
+    private func inferredPeriodStart(end: Date) -> Date? {
+        let used = usedPercent ?? -1
+        let matched = features.first { abs($0.percent - used) < 0.05 }
+        let seconds = Self.windowSeconds(for: matched?.id)
+            ?? Self.windowSeconds(fromRemaining: end.timeIntervalSinceNow)
+        guard let seconds, seconds > 60 else { return nil }
+        return end.addingTimeInterval(-seconds)
+    }
+
+    static func windowSeconds(for id: String?) -> TimeInterval? {
+        switch id {
+        case "5h", "gemini-5h", "3p-5h": return 5 * 3600
+        case "week", "week-opus", "week-sonnet", "gemini-weekly", "3p-weekly": return 7 * 86400
+        case "month": return 30 * 86400
+        default: return nil
+        }
+    }
+
+    // ponytail: remaining-time buckets misread a month with <8d left as a week; prefer periodStart.
+    static func windowSeconds(fromRemaining remaining: TimeInterval) -> TimeInterval? {
+        guard remaining > 0 else { return nil }
+        if remaining <= 6 * 3600 { return 5 * 3600 }
+        if remaining <= 8 * 86400 { return 7 * 86400 }
+        if remaining <= 40 * 86400 { return 30 * 86400 }
+        return nil
+    }
+
+    static func periodNoun(total: TimeInterval) -> String {
+        if total <= 12 * 3600 { return "session" }
+        if total <= 10 * 86400 { return "week" }
+        return "month"
+    }
+}
+
+struct UsagePace: Equatable, Sendable {
+    var usedPercent: Double
+    var elapsedPercent: Double
+    var start: Date
+    var end: Date
+    var emptyAt: Date?
+    var noun: String
+
+    var isHot: Bool { usedPercent > elapsedPercent + 3 }
+
+    func caption(now: Date = Date()) -> String {
+        let through = "\(Int(elapsedPercent.rounded()))% through the \(noun)"
+        if usedPercent >= 99.5 {
+            return "Empty · \(through)"
+        }
+        if isHot, let emptyAt, emptyAt < end {
+            if emptyAt <= now {
+                return "Running out now · \(through)"
+            }
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .abbreviated
+            return "Empty \(formatter.localizedString(for: emptyAt, relativeTo: now)) · \(through)"
+        }
+        return "On track · \(through)"
     }
 }
 
