@@ -240,7 +240,8 @@ final class UsageViewModel {
         case .antigravity:
             let file = AntigravityAuthStore.credentialsFileURL()
             if FileManager.default.fileExists(atPath: file.path) { return file.path }
-            return "macOS Keychain (gemini / antigravity)"
+            if let agy = AntigravityUsageClient.agyExecutable() { return agy.path }
+            return file.path
         }
     }
 

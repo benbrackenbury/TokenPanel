@@ -1,7 +1,4 @@
 import Foundation
-#if canImport(Security)
-import Security
-#endif
 
 enum AntigravityAuthStore {
     static func credentialsFileURL() -> URL {
@@ -11,8 +8,12 @@ enum AntigravityAuthStore {
         return LocalHome.realHomeDirectory().appendingPathComponent(".gemini/oauth_creds.json")
     }
 
+    /// File from `agy` / Gemini, or the `agy` binary (it owns the Keychain item).
+    /// Do not `SecItemCopyMatching` service "gemini" — TokenPanel is a different
+    /// binary, so macOS prompts for the login password on every read.
     static var isConfigured: Bool {
-        FileManager.default.fileExists(atPath: credentialsFileURL().path) || keychainPayload() != nil
+        FileManager.default.fileExists(atPath: credentialsFileURL().path)
+            || AntigravityUsageClient.agyExecutable() != nil
     }
 
     struct Credentials {
@@ -28,9 +29,6 @@ enum AntigravityAuthStore {
     }
 
     static func load() throws -> Credentials {
-        if let data = keychainPayload(), let creds = try? parse(data) {
-            return creds
-        }
         let url = credentialsFileURL()
         let data: Data
         do {
@@ -65,24 +63,6 @@ enum AntigravityAuthStore {
                 planLabel: JSONMap.string(root["auth_method"])
             )
         )
-    }
-
-    static func keychainPayload() -> Data? {
-        #if canImport(Security)
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "gemini",
-            kSecAttrAccount as String: "antigravity",
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status == errSecSuccess, let data = item as? Data, !data.isEmpty else { return nil }
-        return data
-        #else
-        return nil
-        #endif
     }
 
     private static func decodeKeyring(_ data: Data) -> Data? {
